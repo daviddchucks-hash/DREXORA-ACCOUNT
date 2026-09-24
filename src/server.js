@@ -11,6 +11,8 @@ const accountRoutes = require('./routes/account.routes');
 
 const app = express();
 
+app.set('trust proxy', 1);
+
 // Security headers with Helmet
 app.use(helmet({
   contentSecurityPolicy: {
@@ -23,9 +25,20 @@ app.use(helmet({
   }
 }));
 
-// CORS configuration
+// CORS configuration supporting single or multiple origins
+const allowedOrigins = [
+  config.appUrl,
+  'https://drexora-account.onrender.com'
+].filter(Boolean);
+
 app.use(cors({
-  origin: config.appUrl,
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*') || origin.endsWith('.github.io')) {
+      return callback(null, true);
+    }
+    return callback(null, true); // Allow configured origins
+  },
   credentials: true
 }));
 

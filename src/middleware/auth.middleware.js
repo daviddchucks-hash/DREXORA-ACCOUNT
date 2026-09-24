@@ -66,17 +66,16 @@ async function authenticate(req, res, next) {
 }
 
 /**
- * Cookie options helper for production and dev
+ * Cookie options helper supporting both same-origin (Render) and cross-origin (GitHub Pages)
  */
 function cookieOptions() {
   const isProduction = config.nodeEnv === 'production';
-  const opts = {
+  return {
     httpOnly: true,
     secure: isProduction,
-    sameSite: 'lax',
+    sameSite: isProduction ? 'none' : 'lax',
     path: '/'
   };
-  return opts;
 }
 
 function parseBearerToken(req) {
