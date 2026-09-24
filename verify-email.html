@@ -4,13 +4,13 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Verify Email — Drexora Account</title>
-  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <div class="auth-wrapper">
     <div class="auth-card">
       <div class="brand-header">
-        <a href="/" class="brand-title">Drexora Account</a>
+        <a href="index.html" class="brand-title">Drexora Account</a>
       </div>
       <h1 class="page-title">Email Verification</h1>
       <p class="page-subtitle" id="subtitle-status">Verifying your request...</p>
@@ -18,7 +18,7 @@
       <div id="alert" class="alert"></div>
 
       <div id="action-container" style="display: none; margin-top: 20px;">
-        <a href="/login.html" class="btn">Proceed to Sign In</a>
+        <a href="login.html" class="btn">Proceed to Sign In</a>
       </div>
 
       <div id="resend-section" style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 20px;">
@@ -34,7 +34,7 @@
     </div>
   </div>
 
-  <script src="/js/app.js"></script>
+  <script src="js/app.js"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');

@@ -2,9 +2,17 @@
  * Drexora Account Client API & Frontend Application Logic
  */
 
+// Centralized API Base URL
+// When running locally on localhost, use relative '/api' endpoint.
+// When hosted on GitHub Pages or external domain, point to Render production backend.
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? ''
+  : 'https://drexora-account.onrender.com';
+
 const API = {
   async req(endpoint, options = {}) {
     const config = {
+      credentials: 'include', // Ensures cross-origin session cookies are sent
       headers: {
         'Content-Type': 'application/json',
         ...options.headers
@@ -17,7 +25,7 @@ const API = {
     }
 
     try {
-      const res = await fetch(`/api${endpoint}`, config);
+      const res = await fetch(`${API_BASE_URL}/api${endpoint}`, config);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(data.error || 'An error occurred. Please try again.');
@@ -78,7 +86,7 @@ async function requireAuth() {
     const data = await API.get('/auth/me');
     return data.user;
   } catch (err) {
-    window.location.href = '/login.html';
+    window.location.href = 'login.html';
     return null;
   }
 }
@@ -87,7 +95,7 @@ async function requireAuth() {
 async function redirectIfAuthenticated() {
   try {
     await API.get('/auth/me');
-    window.location.href = '/account.html';
+    window.location.href = 'account.html';
   } catch (err) {
     // User is guest, stay on auth page
   }
@@ -100,7 +108,7 @@ async function handleLogout() {
   } catch (e) {
     // Ignore error
   }
-  window.location.href = '/login.html';
+  window.location.href = 'login.html';
 }
 
 // Logout All Devices Action
@@ -111,5 +119,5 @@ async function handleLogoutAll() {
   } catch (e) {
     // Ignore error
   }
-  window.location.href = '/login.html';
+  window.location.href = 'login.html';
 }
