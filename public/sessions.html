@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Active Sessions — Drexora Account</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <nav class="nav-bar">
+    <div class="nav-container">
+      <a href="/account.html" class="brand-title">Drexora Account</a>
+      <div class="nav-links">
+        <a href="/account.html" class="nav-link">Profile</a>
+        <a href="/security.html" class="nav-link">Security</a>
+        <a href="/sessions.html" class="nav-link active">Sessions</a>
+        <a href="#" onclick="handleLogout(); return false;" class="nav-link" style="color: var(--danger-color);">Sign Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
+      <div>
+        <h1 class="page-title">Active Sessions & Devices</h1>
+        <p class="page-subtitle">Manage devices currently logged into your Drexora Account.</p>
+      </div>
+      <button onclick="revokeAllOthers()" class="btn btn-sm btn-danger" style="width: auto;">Log Out Other Devices</button>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <div class="card-section">
+      <h2 class="section-title">Devices & Browsers</h2>
+      <div id="sessions-list">
+        <p style="color: var(--text-muted); font-size: 13px;">Loading active sessions...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    async function loadSessions() {
+      const user = await requireAuth();
+      if (!user) return;
+
+      try {
+        const res = await API.get('/account/sessions');
+        const container = document.getElementById('sessions-list');
+        container.innerHTML = '';
+
+        if (!res.sessions || res.sessions.length === 0) {
+          container.innerHTML = '<p style="color: var(--text-muted);">No active sessions found.</p>';
+          return;
+        }
+
+        res.sessions.forEach(s => {
+          const item = document.createElement('div');
+          item.className = 'session-item';
+
+          const browser = s.deviceInfo ? s.deviceInfo.browser : 'Unknown Browser';
+          const os = s.deviceInfo ? s.deviceInfo.os : 'Unknown OS';
+          const created = new Date(s.createdAt).toLocaleString();
+          const lastActive = new Date(s.lastActivity).toLocaleString();
+
+          item.innerHTML = `
+            <div class="session-info">
+              <div class="session-device">
+                ${browser} on ${os}
+                ${s.isCurrent ? '<span class="badge badge-active" style="margin-left: 8px;">Current Session</span>' : ''}
+              </div>
+              <div class="session-meta">
+                IP: ${s.ipAddress} | Created: ${created} | Last Active: ${lastActive}
+              </div>
+            </div>
+            <div>
+              ${!s.isCurrent ? `<button onclick="revokeSession('${s.sessionId}')" class="btn btn-sm btn-secondary">Revoke</button>` : ''}
+            </div>
+          `;
+
+          container.appendChild(item);
+        });
+      } catch (err) {
+        showAlert('alert', err.message);
+      }
+    }
+
+    async function revokeSession(sessionId) {
+      if (!confirm('Revoke access for this session?')) return;
+      try {
+        const res = await API.delete(`/account/sessions/${sessionId}`);
+        showAlert('alert', res.message, true);
+        loadSessions();
+      } catch (err) {
+        showAlert('alert', err.message);
+      }
+    }
+
+    async function revokeAllOthers() {
+      if (!confirm('Are you sure you want to log out from all other devices?')) return;
+      try {
+        const res = await API.post('/account/sessions/revoke-others');
+        showAlert('alert', res.message, true);
+        loadSessions();
+      } catch (err) {
+        showAlert('alert', err.message);
+      }
+    }
+
+    loadSessions();
+  </script>
+</body>
+</html>

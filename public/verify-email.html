@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Verify Email — Drexora Account</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card">
+      <div class="brand-header">
+        <a href="/" class="brand-title">Drexora Account</a>
+      </div>
+      <h1 class="page-title">Email Verification</h1>
+      <p class="page-subtitle" id="subtitle-status">Verifying your request...</p>
+
+      <div id="alert" class="alert"></div>
+
+      <div id="action-container" style="display: none; margin-top: 20px;">
+        <a href="/login.html" class="btn">Proceed to Sign In</a>
+      </div>
+
+      <div id="resend-section" style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 20px;">
+        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Request new link</h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Need a new verification link? Enter your email address below.</p>
+        <form id="resend-form">
+          <div class="form-group">
+            <input type="email" id="resend-email" placeholder="Your email address" required>
+          </div>
+          <button type="submit" id="resend-btn" class="btn btn-secondary">Resend Verification Email</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    const action = urlParams.get('action');
+
+    async function processVerification() {
+      if (!token) {
+        document.getElementById('subtitle-status').textContent = 'Please check your email for the verification link or request a new one.';
+        return;
+      }
+
+      try {
+        const endpoint = action === 'email_change' ? '/auth/confirm-email-change' : '/auth/verify-email';
+        const res = await API.post(endpoint, { token });
+        document.getElementById('subtitle-status').textContent = 'Verification completed.';
+        showAlert('alert', res.message, true);
+        document.getElementById('action-container').style.display = 'block';
+      } catch (err) {
+        document.getElementById('subtitle-status').textContent = 'Verification could not be completed.';
+        showAlert('alert', err.message);
+      }
+    }
+
+    processVerification();
+
+    document.getElementById('resend-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alert');
+      setLoading('resend-btn', true);
+
+      const email = document.getElementById('resend-email').value;
+
+      try {
+        const res = await API.post('/auth/resend-verification', { email });
+        showAlert('alert', res.message, true);
+      } catch (err) {
+        showAlert('alert', err.message);
+      } finally {
+        setLoading('resend-btn', false);
+      }
+    });
+  </script>
+</body>
+</html>

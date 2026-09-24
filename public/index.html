@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drexora Account</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card" style="text-align: center;">
+      <div class="brand-header">
+        <span class="brand-title">Drexora Account</span>
+      </div>
+      <h1 class="page-title">Manage your Drexora identity</h1>
+      <p class="page-subtitle">Your central security and profile account management system.</p>
+
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 24px;">
+        <a href="/login.html" class="btn">Sign In</a>
+        <a href="/register.html" class="btn btn-secondary">Create Account</a>
+      </div>
+    </div>
+  </div>
+  <script src="/js/app.js"></script>
+  <script>
+    redirectIfAuthenticated();
+  </script>
+</body>
+</html>
