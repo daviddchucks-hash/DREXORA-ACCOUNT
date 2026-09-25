@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authenticating... — Drexora SSO Callback</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .callback-card {
+      max-width: 480px;
+      margin: 60px auto;
+      padding: 32px;
+      text-align: center;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #4f46e5;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="callback-card">
+    <h2 id="status-title" style="color: #0f172a; margin-bottom: 8px;">Completing Sign In...</h2>
+    <p id="status-desc" style="color: #64748b; font-size: 0.95rem;">Exchanging single-use authorization code for identity tokens.</p>
+    <div id="spinner" class="spinner"></div>
+    <div id="alert" class="alert" style="display: none; margin-top: 20px; text-align: left;"></div>
+    <p id="back-link" style="display: none; margin-top: 20px;"><a href="index.html">← Return to Test Application</a></p>
+  </div>
+
+  <script>
+    async function processCallback() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+      const errorDesc = urlParams.get('error_description');
+
+      const alertEl = document.getElementById('alert');
+      const spinnerEl = document.getElementById('spinner');
+      const backLinkEl = document.getElementById('back-link');
+
+      function showError(msg) {
+        spinnerEl.style.display = 'none';
+        document.getElementById('status-title').textContent = 'Authentication Failed';
+        document.getElementById('status-desc').textContent = 'An error occurred during Drexora Single Sign-On.';
+        alertEl.textContent = msg;
+        alertEl.className = 'alert alert-error';
+        alertEl.style.display = 'block';
+        backLinkEl.style.display = 'block';
+      }
+
+      if (error) {
+        showError(`${error}: ${errorDesc || 'Authorization request was rejected.'}`);
+        return;
+      }
+
+      if (!code) {
+        showError('No authorization code was returned in callback URL.');
+        return;
+      }
+
+      // 1. Verify State Parameter to prevent CSRF
+      const storedState = sessionStorage.getItem('oauth_state');
+      if (state && storedState && state !== storedState) {
+        showError('OAuth state mismatch error. Possible Cross-Site Request Forgery attempt.');
+        return;
+      }
+
+      // 2. Retrieve PKCE Code Verifier
+      const codeVerifier = sessionStorage.getItem('oauth_pkce_verifier');
+      if (!codeVerifier) {
+        showError('PKCE code_verifier was not found in session storage.');
+        return;
+      }
+
+      try {
+        const redirectUri = window.location.origin + '/test-client/callback.html';
+
+        // 3. Exchange Authorization Code for Tokens at /oauth/token
+        const tokenRes = await fetch('/oauth/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: redirectUri,
+            client_id: 'dx_client_test_app',
+            code_verifier: codeVerifier
+          })
+        });
+
+        const tokenData = await tokenRes.json();
+        if (!tokenRes.ok) {
+          throw new Error(tokenData.error_description || tokenData.error || 'Token exchange failed');
+        }
+
+        // 4. Fetch UserInfo profile using Bearer Access Token
+        const userInfoRes = await fetch('/oauth/userinfo', {
+          headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+        });
+
+        const userInfo = await userInfoRes.json();
+        if (!userInfoRes.ok) {
+          throw new Error(userInfo.error_description || userInfo.error || 'Failed to fetch UserInfo claims');
+        }
+
+        // Clean up temporary OAuth PKCE storage
+        sessionStorage.removeItem('oauth_pkce_verifier');
+        sessionStorage.removeItem('oauth_state');
+
+        // Store authenticated session for test app
+        sessionStorage.setItem('test_app_user', JSON.stringify(userInfo));
+        sessionStorage.setItem('test_app_access_token', tokenData.access_token);
+        if (tokenData.id_token) {
+          sessionStorage.setItem('test_app_id_token', tokenData.id_token);
+        }
+
+        // Redirect back to Test App landing page
+        window.location.href = 'index.html';
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    processCallback();
+  </script>
+</body>
+</html>
