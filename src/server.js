@@ -77,6 +77,10 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
+// OpenID Connect Discovery & JWKS
+app.get('/.well-known/openid-configuration', oauthController.getOpenIdConfiguration);
+app.get('/.well-known/jwks.json', oauthController.getJwks);
+
 // API & OAuth Routes
 app.use('/oauth', oauthRoutes);
 app.use('/api/oauth', oauthRoutes);

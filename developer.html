@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer Dashboard — Drexora Account</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
+    .modal-content {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 28px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .checkbox-item input {
+      margin-top: 3px;
+    }
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    pre {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 14px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+      font-family: monospace;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav-bar">
+    <div class="nav-container">
+      <a href="account.html" class="brand-title">Drexora Account</a>
+      <div class="nav-links">
+        <a href="account.html" class="nav-link">Profile</a>
+        <a href="security.html" class="nav-link">Security</a>
+        <a href="sessions.html" class="nav-link">Sessions</a>
+        <a href="connected-apps.html" class="nav-link">Connected Apps</a>
+        <a href="developer.html" class="nav-link active">Developer</a>
+        <a href="developer-docs.html" class="nav-link">Docs</a>
+        <a href="#" onclick="handleLogout(); return false;" class="nav-link" style="color: var(--danger-color);">Sign Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div>
+        <h1 class="page-title">Developer Portal</h1>
+        <p class="page-subtitle" style="margin-bottom: 0;">Register and manage applications using Drexora Identity & SSO.</p>
+      </div>
+      <button class="btn btn-sm" onclick="openRegisterModal()" style="width: auto;">+ Register New App</button>
+    </div>
+
+    <div id="alert" class="alert"></div>
+
+    <div class="card-section">
+      <h2 class="section-title">My Registered Applications</h2>
+      <div id="apps-container">
+        <p style="color: var(--text-muted); font-size: 13px;">Loading applications...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register App Modal -->
+  <div id="register-modal" class="modal-overlay">
+    <div class="modal-content">
+      <h2 class="section-title" style="margin-bottom: 16px;">Register Application</h2>
+      <form id="register-app-form">
+        <div class="form-group">
+          <label for="appName">Application Name *</label>
+          <input type="text" id="appName" placeholder="e.g. Acme Cloud Dashboard" required>
+        </div>
+
+        <div class="form-group">
+          <label for="appDesc">Description</label>
+          <input type="text" id="appDesc" placeholder="Brief explanation of your application">
+        </div>
+
+        <div class="form-group">
+          <label for="websiteUrl">Website URL</label>
+          <input type="text" id="websiteUrl" placeholder="https://example.com">
+        </div>
+
+        <div class="form-group">
+          <label for="logoUrl">Logo Image URL</label>
+          <input type="text" id="logoUrl" placeholder="https://example.com/logo.png">
+        </div>
+
+        <div class="form-group">
+          <label for="clientType">Client Type *</label>
+          <select id="clientType" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius);">
+            <option value="public">Public (Browser SPA, Mobile, Desktop — PKCE required)</option>
+            <option value="confidential">Confidential (Backend Server with Client Secret)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="appType">Application Type *</label>
+          <select id="appType" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius);">
+            <option value="external_application">External Application</option>
+            <option value="drexora_product">Drexora Product</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="redirectUris">Redirect URIs (One per line) *</label>
+          <textarea id="redirectUris" rows="3" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: var(--radius); font-family: monospace; font-size: 13px;" placeholder="https://example.com/callback&#10;http://localhost:3000/callback" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Allowed Scopes</label>
+          <div class="checkbox-group" id="scopes-checkboxes">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 24px;">
+          <button type="submit" id="reg-submit-btn" class="btn">Register Application</button>
+          <button type="button" class="btn btn-secondary" onclick="closeRegisterModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Guide Modal -->
+  <div id="guide-modal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 700px;">
+      <h2 class="section-title" id="guide-title" style="margin-bottom: 16px;">Integration Guide</h2>
+      <div id="guide-body">
+        <!-- Personalized snippet rendered here -->
+      </div>
+      <div style="margin-top: 20px; text-align: right;">
+        <button class="btn btn-secondary" onclick="closeGuideModal()" style="width: auto;">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    let globalScopes = [];
+    let loadedApps = [];
+
+    const IdpBaseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+      ? window.location.origin
+      : 'https://drexora-account.onrender.com';
+
+    async function initDeveloperPortal() {
+      const user = await requireAuth();
+      if (!user) return;
+
+      loadScopes();
+      loadDeveloperApps();
+    }
+
+    async function loadScopes() {
+      try {
+        const res = await API.get('/developer/scopes');
+        globalScopes = res.scopes || [];
+
+        const container = document.getElementById('scopes-checkboxes');
+        container.innerHTML = globalScopes.map(s => `
+          <label class="checkbox-item">
+            <input type="checkbox" name="scope" value="${s.key}" ${s.isDefault ? 'checked disabled' : 'checked'}>
+            <div>
+              <strong>${escapeHtml(s.name)}</strong> (<code>${escapeHtml(s.key)}</code>)
+              <div style="color: var(--text-muted); font-size: 11px;">${escapeHtml(s.description)}</div>
+            </div>
+          </label>
+        `).join('');
+      } catch (e) {
+        console.error('Failed to load scopes', e);
+      }
+    }
+
+    async function loadDeveloperApps() {
+      const container = document.getElementById('apps-container');
+      try {
+        const res = await API.get('/developer/applications');
+        loadedApps = res.applications || [];
+
+        if (loadedApps.length === 0) {
+          container.innerHTML = `
+            <div style="padding: 24px 0; text-align: center; color: var(--text-muted);">
+              <p>You have not registered any applications yet.</p>
+              <button class="btn btn-sm btn-secondary" onclick="openRegisterModal()" style="margin-top: 12px; width: auto;">Register Your First Application</button>
+            </div>
+          `;
+          return;
+        }
+
+        container.innerHTML = loadedApps.map(app => `
+          <div class="card-section" style="margin-bottom: 16px; border: 1px solid var(--border-color); padding: 16px;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+              <div style="display: flex; gap: 12px; align-items: center;">
+                ${app.logoUrl ? `<img src="${escapeHtml(app.logoUrl)}" alt="Logo" style="width: 36px; height: 36px; border-radius: 6px; object-fit: cover;">` : ''}
+                <div>
+                  <h3 style="font-size: 16px; font-weight: 600;">${escapeHtml(app.name)}</h3>
+                  <p style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">${escapeHtml(app.description || 'No description provided')}</p>
+                </div>
+              </div>
+              <span class="badge ${app.status === 'active' ? 'badge-active' : 'badge-unverified'}">${escapeHtml(app.status)}</span>
+            </div>
+
+            <div class="data-grid" style="grid-template-columns: 140px 1fr;">
+              <div class="data-label">Client ID</div>
+              <div class="data-value"><code>${escapeHtml(app.clientId)}</code></div>
+
+              <div class="data-label">Client Type</div>
+              <div class="data-value">${escapeHtml(app.clientType)} client</div>
+
+              <div class="data-label">Application Type</div>
+              <div class="data-value">${escapeHtml(app.appType)}</div>
+
+              <div class="data-label">Redirect URIs</div>
+              <div class="data-value">${(app.redirectUris || []).map(u => `<div><code>${escapeHtml(u)}</code></div>`).join('')}</div>
+
+              <div class="data-label">Allowed Scopes</div>
+              <div class="data-value">${(app.allowedScopes || []).map(s => `<code>${escapeHtml(s)}</code>`).join(' ')}</div>
+            </div>
+
+            <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; gap: 10px; flex-wrap: wrap;">
+              <button class="btn btn-sm btn-secondary" onclick="showIntegrationGuide('${escapeHtml(app.clientId)}')">View Integration Guide</button>
+              ${app.clientType === 'confidential' ? `<button class="btn btn-sm btn-secondary" onclick="rotateSecret('${escapeHtml(app.clientId)}')">Rotate Client Secret</button>` : ''}
+              <button class="btn btn-sm btn-danger" onclick="deleteApp('${escapeHtml(app.clientId)}', '${escapeHtml(app.name)}')">Disable App</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (err) {
+        showAlert('alert', err.message);
+      }
+    }
+
+    function showIntegrationGuide(clientId) {
+      const app = loadedApps.find(a => a.clientId === clientId);
+      if (!app) return;
+
+      document.getElementById('guide-title').textContent = `Integration Guide — ${app.name}`;
+      const cb = (app.redirectUris && app.redirectUris[0]) ? app.redirectUris[0] : 'https://yourapp.com/callback';
+      const scopesStr = (app.allowedScopes || ['openid', 'profile', 'email']).join(' ');
+
+      document.getElementById('guide-body').innerHTML = `
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">
+          Follow these personalized steps to integrate "Continue with Drexora" into <strong>${escapeHtml(app.name)}</strong>.
+        </p>
+
+        <h4 style="font-size: 14px; font-weight: 600; margin: 12px 0 6px 0;">1. Redirect User to Authorization Endpoint</h4>
+        <pre>GET ${IdpBaseUrl}/oauth/authorize?
+  client_id=${app.clientId}&
+  redirect_uri=${encodeURIComponent(cb)}&
+  response_type=code&
+  scope=${encodeURIComponent(scopesStr)}&
+  state=YOUR_RANDOM_STATE&
+  code_challenge=YOUR_PKCE_CHALLENGE&
+  code_challenge_method=S256</pre>
+
+        <h4 style="font-size: 14px; font-weight: 600; margin: 16px 0 6px 0;">2. Exchange Authorization Code for Tokens</h4>
+        <pre>POST ${IdpBaseUrl}/oauth/token
+Content-Type: application/json
+
+{
+  "grant_type": "authorization_code",
+  "code": "dx_code_RECEIVED_FROM_CALLBACK",
+  "redirect_uri": "${cb}",
+  "client_id": "${app.clientId}",
+  ${app.clientType === 'confidential' ? '"client_secret": "YOUR_CLIENT_SECRET",' : ''}
+  "code_verifier": "YOUR_PKCE_VERIFIER"
+}</pre>
+
+        <h4 style="font-size: 14px; font-weight: 600; margin: 16px 0 6px 0;">3. Fetch Verified Identity</h4>
+        <pre>GET ${IdpBaseUrl}/oauth/userinfo
+Authorization: Bearer YOUR_ACCESS_TOKEN
+
+Response:
+{
+  "sub": "dx_8f72abc123",
+  "name": "User Full Name",
+  "email": "user@example.com",
+  "email_verified": true
+}</pre>
+      `;
+
+      document.getElementById('guide-modal').style.display = 'flex';
+    }
+
+    function closeGuideModal() {
+      document.getElementById('guide-modal').style.display = 'none';
+    }
+
+    function openRegisterModal() {
+      document.getElementById('register-modal').style.display = 'flex';
+    }
+
+    function closeRegisterModal() {
+      document.getElementById('register-modal').style.display = 'none';
+      document.getElementById('register-app-form').reset();
+    }
+
+    document.getElementById('register-app-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      hideAlert('alert');
+      setLoading('reg-submit-btn', true);
+
+      const name = document.getElementById('appName').value;
+      const description = document.getElementById('appDesc').value;
+      const websiteUrl = document.getElementById('websiteUrl').value;
+      const logoUrl = document.getElementById('logoUrl').value;
+      const clientType = document.getElementById('clientType').value;
+      const appType = document.getElementById('appType').value;
+      const redirectUrisRaw = document.getElementById('redirectUris').value;
+      const redirectUris = redirectUrisRaw.split('\n').map(u => u.trim()).filter(Boolean);
+
+      const scopeCheckboxes = document.querySelectorAll('input[name="scope"]:checked');
+      const allowedScopes = Array.from(scopeCheckboxes).map(c => c.value);
+
+      try {
+        const res = await API.post('/developer/applications', {
+          name,
+          description,
+          websiteUrl,
+          logoUrl,
+          clientType,
+          appType,
+          redirectUris,
+          allowedScopes
+        });
+
+        closeRegisterModal();
+        let successMsg = res.message || 'Application registered successfully!';
+        if (res.application && res.application.clientSecret) {
+          alert(`IMPORTANT: Copy your new Client Secret now. It will NOT be shown again:\n\nClient Secret: ${res.application.clientSecret}`);
+        }
+
+        showAlert('alert', successMsg, true);
+        loadDeveloperApps();
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        setLoading('reg-submit-btn', false);
+      }
+    });
+
+    async function rotateSecret(clientId) {
+      if (!confirm('Are you sure you want to rotate the client secret? The old secret will immediately stop working.')) return;
+
+      try {
+        const res = await API.post(`/developer/applications/${clientId}/rotate-secret`);
+        alert(`NEW CLIENT SECRET GENERATED:\n\n${res.clientSecret}\n\nCopy this secret immediately. It will not be displayed again.`);
+        showAlert('alert', 'Client secret rotated successfully.', true);
+      } catch (err) {
+        showAlert('alert', err.message);
+      }
+    }
+
+    async function deleteApp(clientId, appName) {
+      if (!confirm(`Are you sure you want to disable "${appName}"? Users will no longer be able to log in to this application.`)) return;
+
+      try {
+        const res = await API.delete(`/developer/applications/${clientId}`);
+        showAlert('alert', res.message || 'Application disabled', true);
+        loadDeveloperApps();
+      } catch (err) {
+        showAlert('alert', err.message);
+      }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    initDeveloperPortal();
+  </script>
+</body>
+</html>

@@ -15,4 +15,8 @@ router.get('/userinfo', oauthController.userinfo);
 
 router.post('/revoke', oauthController.revoke);
 
+// OIDC Discovery & JWKS
+router.get('/.well-known/openid-configuration', oauthController.getOpenIdConfiguration);
+router.get('/.well-known/jwks.json', oauthController.getJwks);
+
 module.exports = router;

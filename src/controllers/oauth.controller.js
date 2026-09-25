@@ -312,6 +312,47 @@ class OAuthController {
   }
 
   /**
+   * OpenID Connect Discovery Endpoint
+   * GET /.well-known/openid-configuration
+   */
+  async getOpenIdConfiguration(req, res, next) {
+    try {
+      const baseUrl = config.appUrl || `${req.protocol}://${req.get('host')}`;
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.status(200).json({
+        issuer: baseUrl,
+        authorization_endpoint: `${baseUrl}/oauth/authorize`,
+        token_endpoint: `${baseUrl}/oauth/token`,
+        userinfo_endpoint: `${baseUrl}/oauth/userinfo`,
+        revocation_endpoint: `${baseUrl}/oauth/revoke`,
+        jwks_uri: `${baseUrl}/.well-known/jwks.json`,
+        response_types_supported: ['code'],
+        subject_types_supported: ['public'],
+        id_token_signing_alg_values_supported: ['HS256'],
+        scopes_supported: ['openid', 'profile', 'email', 'profile.read', 'email.read', 'account.read'],
+        token_endpoint_auth_methods_supported: ['client_secret_post', 'none'],
+        code_challenge_methods_supported: ['S256', 'plain'],
+        grant_types_supported: ['authorization_code']
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * OpenID Connect JWKS Endpoint
+   * GET /.well-known/jwks.json
+   */
+  async getJwks(req, res, next) {
+    try {
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      res.status(200).json({ keys: [] });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * Controlled Client Registration Endpoint (Admin / Internal seed)
    * POST /api/admin/clients
    */

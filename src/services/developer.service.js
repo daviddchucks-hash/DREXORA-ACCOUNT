@@ -132,6 +132,8 @@ class DeveloperService {
     const {
       name,
       description = '',
+      websiteUrl = '',
+      logoUrl = '',
       clientType = 'public', // 'public' | 'confidential'
       appType = 'external_application', // 'drexora_product' | 'external_application'
       redirectUris = [],
@@ -158,6 +160,8 @@ class DeveloperService {
       appType,
       name: name.trim(),
       description: description ? description.trim() : '',
+      websiteUrl: websiteUrl ? websiteUrl.trim() : '',
+      logoUrl: logoUrl ? logoUrl.trim() : '',
       owner: ownerInfo,
       redirectUris: validatedRedirectUris,
       allowedOrigins: Array.isArray(allowedOrigins) ? allowedOrigins.map(o => o.trim()) : [],
