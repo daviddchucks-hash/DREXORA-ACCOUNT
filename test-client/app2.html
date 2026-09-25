@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Drexora Identity Test Application</title>
+  <title>Drexora Test App B</title>
   <link rel="stylesheet" href="../css/style.css">
   <style>
     .test-app-wrapper {
@@ -19,7 +19,7 @@
       align-items: center;
       justify-content: center;
       gap: 12px;
-      background: #4f46e5;
+      background: #0284c7;
       color: #ffffff;
       font-weight: 600;
       font-size: 1rem;
@@ -32,7 +32,7 @@
       text-decoration: none;
     }
     .sso-btn:hover {
-      background: #4338ca;
+      background: #0369a1;
     }
     .profile-box {
       background: #f8fafc;
@@ -63,30 +63,27 @@
 <body>
   <div class="test-app-wrapper">
     <div style="text-align: center; margin-bottom: 24px;">
-      <span style="background: #eef2ff; color: #4f46e5; font-size: 0.8rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase;">
-        External Application Sample
+      <span style="background: #e0f2fe; color: #0284c7; font-size: 0.8rem; font-weight: 700; padding: 4px 10px; border-radius: 12px; text-transform: uppercase;">
+        External Test Application B
       </span>
-      <h1 style="font-size: 1.6rem; color: #0f172a; margin-top: 12px;">Example Company Web Portal</h1>
+      <h1 style="font-size: 1.6rem; color: #0f172a; margin-top: 12px;">Second Independent Test App</h1>
       <p style="color: #64748b; font-size: 0.95rem;">
-        Demonstrating Drexora Account Single Sign-On (SSO) integration using OAuth 2.0 & OpenID Connect with PKCE.
+        Testing stable user identity across distinct registered applications with Drexora SSO.
       </p>
     </div>
 
     <div id="unauthenticated-view">
       <p style="text-align: center; color: #334155; margin-bottom: 20px;">
-        Click below to authenticate securely using your Drexora Account identity.
+        Click below to authenticate Test App B with your Drexora Account.
       </p>
       <button id="sso-button" class="sso-btn">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13 12H3"/>
-        </svg>
-        Continue with Drexora
+        Continue with Drexora (App B)
       </button>
     </div>
 
     <div id="authenticated-view" style="display: none;">
       <div style="display: flex; align-items: center; gap: 10px; color: #10b981; font-weight: 600; margin-bottom: 16px;">
-        <span style="font-size: 1.2rem;">✓</span> Authenticated via Drexora Identity
+        <span style="font-size: 1.2rem;">✓</span> Authenticated Test App B
       </div>
 
       <div class="profile-box">
@@ -102,19 +99,10 @@
           <span class="claim-label">Email:</span>
           <span id="claim-email" class="claim-val">-</span>
         </div>
-        <div class="claim-row">
-          <span class="claim-label">Email Verified:</span>
-          <span id="claim-verified" class="claim-val">-</span>
-        </div>
-      </div>
-
-      <div style="margin-top: 20px;">
-        <p style="font-size: 0.85rem; font-weight: 600; color: #475569; margin-bottom: 6px;">Received ID Token:</p>
-        <textarea id="id-token-display" readonly style="width: 100%; height: 80px; font-family: monospace; font-size: 0.75rem; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: #f8fafc;" onclick="this.select()"></textarea>
       </div>
 
       <button id="logout-btn" class="btn" style="background: #ef4444; margin-top: 20px;">
-        Log Out from Test App
+        Log Out from Test App B
       </button>
     </div>
   </div>
@@ -146,8 +134,7 @@
         .replace(/=+$/, '');
     }
 
-    const appUser = JSON.parse(sessionStorage.getItem('test_app_user') || 'null');
-    const idToken = sessionStorage.getItem('test_app_id_token');
+    const appUser = JSON.parse(sessionStorage.getItem('test_app_b_user') || 'null');
 
     if (appUser) {
       document.getElementById('unauthenticated-view').style.display = 'none';
@@ -156,8 +143,6 @@
       document.getElementById('claim-sub').textContent = appUser.sub || '-';
       document.getElementById('claim-name').textContent = appUser.name || '-';
       document.getElementById('claim-email').textContent = appUser.email || '-';
-      document.getElementById('claim-verified').textContent = appUser.email_verified ? 'Yes' : 'No';
-      document.getElementById('id-token-display').value = idToken || 'No ID Token issued';
     }
 
     document.getElementById('sso-button').addEventListener('click', async () => {
@@ -166,11 +151,11 @@
         const challenge = await generateCodeChallenge(verifier);
         const state = generateRandomString(24);
 
-        sessionStorage.setItem('oauth_pkce_verifier', verifier);
-        sessionStorage.setItem('oauth_state', state);
+        sessionStorage.setItem('oauth_pkce_verifier_b', verifier);
+        sessionStorage.setItem('oauth_state_b', state);
 
-        const clientId = 'dx_client_test_app';
-        const redirectUri = window.location.origin + '/test-client/callback.html';
+        const clientId = 'dx_client_test_app_b';
+        const redirectUri = window.location.origin + '/test-client/app2_callback.html';
         const scope = 'openid profile email';
 
         const IdpBaseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
@@ -188,15 +173,12 @@
 
         window.location.href = authUrl.toString();
       } catch (err) {
-        console.error('SSO initiate error:', err);
         alert('Failed to initiate SSO: ' + err.message);
       }
     });
 
     document.getElementById('logout-btn')?.addEventListener('click', () => {
-      sessionStorage.removeItem('test_app_user');
-      sessionStorage.removeItem('test_app_id_token');
-      sessionStorage.removeItem('test_app_access_token');
+      sessionStorage.removeItem('test_app_b_user');
       window.location.reload();
     });
   </script>
