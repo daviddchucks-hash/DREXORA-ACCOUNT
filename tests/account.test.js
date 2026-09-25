@@ -15,7 +15,7 @@ function request() {
 }
 
 test('Drexora Account Comprehensive Test Suite', async (t) => {
-  let rawVerificationToken = '';
+  let verificationCode = '';
   let rawPasswordResetToken = '';
   let sessionCookie = '';
   let secondSessionCookie = '';
@@ -23,7 +23,7 @@ test('Drexora Account Comprehensive Test Suite', async (t) => {
 
   const testUser = {
     fullName: 'Jane Doe',
-    email: 'Jane.Doe@Example.com', // Normalized email test
+    email: 'Jane.Doe@Example.com',
     password: 'Password123!',
     confirmPassword: 'Password123!'
   };
@@ -78,21 +78,23 @@ test('Drexora Account Comprehensive Test Suite', async (t) => {
     assert.equal(res.body.code, 'EMAIL_UNVERIFIED');
   });
 
-  await t.test('4. Email Verification Flow', async () => {
-    // Generate known verification token directly via service
+  await t.test('4. 8-Digit Code Email Verification Flow', async () => {
+    // Generate known 8-digit verification code directly
     const tokenRes = await tokenService.createToken(
       'verificationTokens',
       { drexoraUserId: userDrexoraId, email: 'jane.doe@example.com' },
-      24 * 60 * 60 * 1000
+      24 * 60 * 60 * 1000,
+      true
     );
-    rawVerificationToken = tokenRes.rawToken;
+    verificationCode = tokenRes.rawToken;
+    assert.equal(verificationCode.length, 8);
 
-    // Verify with invalid token
-    const res1 = await request().post('/api/auth/verify-email').send({ token: 'invalid_token' });
+    // Verify with invalid code
+    const res1 = await request().post('/api/auth/verify-email').send({ code: '00000000' });
     assert.equal(res1.status, 400);
 
-    // Verify with valid token
-    const res2 = await request().post('/api/auth/verify-email').send({ token: rawVerificationToken });
+    // Verify with valid 8-digit code
+    const res2 = await request().post('/api/auth/verify-email').send({ code: verificationCode });
     assert.equal(res2.status, 200);
 
     // Verify account state
@@ -100,8 +102,8 @@ test('Drexora Account Comprehensive Test Suite', async (t) => {
     assert.equal(user.emailVerified, true);
     assert.equal(user.accountStatus, 'active');
 
-    // Attempt reuse of token
-    const res3 = await request().post('/api/auth/verify-email').send({ token: rawVerificationToken });
+    // Attempt reuse of code
+    const res3 = await request().post('/api/auth/verify-email').send({ code: verificationCode });
     assert.equal(res3.status, 400);
   });
 

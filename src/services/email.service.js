@@ -22,20 +22,26 @@ class EmailService {
         html,
         text
       });
+
+      if (response.error) {
+        console.error('[Email Resend API Error]', response.error);
+        return { success: false, error: response.error.message || 'Resend email sending failed' };
+      }
+
       return { success: true, response };
     } catch (error) {
-      console.error('[Email Error] Failed to send email via Resend:', error);
-      // Fail gracefully so application flow isn't crashed unexpectedly
+      console.error('[Email Exception] Failed to send email via Resend:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Send Account Verification Email
+   * Send Account Verification Email with 8-Digit Code & Direct Link
    */
-  async sendVerificationEmail(email, token, name) {
-    const verifyUrl = `${config.appUrl}/verify-email.html?token=${token}`;
-    const subject = 'Verify your Drexora Account email';
+  async sendVerificationEmail(email, code, name) {
+    const baseUrl = config.frontendUrl || config.appUrl;
+    const verifyUrl = `${baseUrl}/verify-email.html?code=${code}`;
+    const subject = `${code} is your Drexora Account verification code`;
     const html = `
       <!DOCTYPE html>
       <html>
@@ -44,6 +50,7 @@ class EmailService {
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #111827; background-color: #f9fafb; margin: 0; padding: 40px 20px; }
           .container { max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px; }
           .logo { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 24px; letter-spacing: -0.5px; }
+          .code-box { font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #111827; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; margin: 24px 0; font-family: monospace; }
           .btn { display: inline-block; background: #111827; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500; font-size: 14px; margin-top: 16px; margin-bottom: 16px; }
           .footer { font-size: 12px; color: #6b7280; margin-top: 32px; border-top: 1px solid #f3f4f6; padding-top: 16px; }
         </style>
@@ -52,10 +59,11 @@ class EmailService {
         <div class="container">
           <div class="logo">Drexora Account</div>
           <p>Hello ${name || 'there'},</p>
-          <p>Thank you for registering your Drexora Account. Please confirm your email address by clicking the button below:</p>
+          <p>Your 8-digit email verification code for Drexora Account is:</p>
+          <div class="code-box">${code}</div>
+          <p>Enter this code on the verification page, or click the button below to verify automatically:</p>
           <p><a href="${verifyUrl}" class="btn">Verify Email Address</a></p>
-          <p style="font-size: 13px; color: #4b5563;">Or copy and paste this link into your browser:<br><a href="${verifyUrl}">${verifyUrl}</a></p>
-          <p style="font-size: 13px; color: #6b7280;">This verification link will expire in 24 hours.</p>
+          <p style="font-size: 13px; color: #6b7280;">This verification code will expire in 24 hours.</p>
           <div class="footer">
             If you did not create a Drexora Account, you can safely ignore this email.
           </div>
@@ -63,7 +71,7 @@ class EmailService {
       </body>
       </html>
     `;
-    const text = `Hello ${name || 'there'},\n\nPlease verify your email for your Drexora Account by visiting:\n${verifyUrl}\n\nThis link will expire in 24 hours.`;
+    const text = `Hello ${name || 'there'},\n\nYour 8-digit verification code for your Drexora Account is: ${code}\n\nVerify online at:\n${verifyUrl}\n\nThis code will expire in 24 hours.`;
 
     return await this.sendEmail({ to: email, subject, html, text });
   }
@@ -72,7 +80,8 @@ class EmailService {
    * Send Password Reset Email
    */
   async sendPasswordResetEmail(email, token, name) {
-    const resetUrl = `${config.appUrl}/reset-password.html?token=${token}`;
+    const baseUrl = config.frontendUrl || config.appUrl;
+    const resetUrl = `${baseUrl}/reset-password.html?token=${token}`;
     const subject = 'Reset your Drexora Account password';
     const html = `
       <!DOCTYPE html>
@@ -109,9 +118,10 @@ class EmailService {
   /**
    * Send Email Change Verification
    */
-  async sendEmailChangeVerification(newEmail, token, name) {
-    const verifyUrl = `${config.appUrl}/verify-email.html?action=email_change&token=${token}`;
-    const subject = 'Confirm new email address for your Drexora Account';
+  async sendEmailChangeVerification(newEmail, code, name) {
+    const baseUrl = config.frontendUrl || config.appUrl;
+    const verifyUrl = `${baseUrl}/verify-email.html?action=email_change&code=${code}`;
+    const subject = `${code} is your code to confirm new Drexora Account email`;
     const html = `
       <!DOCTYPE html>
       <html>
@@ -120,6 +130,7 @@ class EmailService {
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #111827; background-color: #f9fafb; margin: 0; padding: 40px 20px; }
           .container { max-width: 520px; margin: 0 auto; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px; }
           .logo { font-size: 20px; font-weight: 700; color: #111827; margin-bottom: 24px; letter-spacing: -0.5px; }
+          .code-box { font-size: 32px; font-weight: 800; letter-spacing: 6px; color: #111827; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; text-align: center; margin: 24px 0; font-family: monospace; }
           .btn { display: inline-block; background: #111827; color: #ffffff !important; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: 500; font-size: 14px; margin-top: 16px; margin-bottom: 16px; }
           .footer { font-size: 12px; color: #6b7280; margin-top: 32px; border-top: 1px solid #f3f4f6; padding-top: 16px; }
         </style>
@@ -128,11 +139,11 @@ class EmailService {
         <div class="container">
           <div class="logo">Drexora Account</div>
           <p>Hello ${name || 'there'},</p>
-          <p>You requested to update your primary email address for Drexora Account to <strong>${newEmail}</strong>.</p>
-          <p>Click below to verify this new email address:</p>
+          <p>Your 8-digit confirmation code to update your primary email address to <strong>${newEmail}</strong> is:</p>
+          <div class="code-box">${code}</div>
+          <p>Click below or enter the code online to confirm:</p>
           <p><a href="${verifyUrl}" class="btn">Confirm Email Change</a></p>
-          <p style="font-size: 13px; color: #4b5563;">Or link:<br><a href="${verifyUrl}">${verifyUrl}</a></p>
-          <p style="font-size: 13px; color: #6b7280;">This link will expire in 2 hours.</p>
+          <p style="font-size: 13px; color: #6b7280;">This code will expire in 2 hours.</p>
           <div class="footer">
             If you did not request this change, please ignore this email or change your password.
           </div>
@@ -140,7 +151,7 @@ class EmailService {
       </body>
       </html>
     `;
-    const text = `Hello ${name || 'there'},\n\nConfirm your new primary email address (${newEmail}) by visiting:\n${verifyUrl}\n\nLink expires in 2 hours.`;
+    const text = `Hello ${name || 'there'},\n\nConfirm your new primary email address (${newEmail}) with code: ${code}\n\nOr visit:\n${verifyUrl}\n\nExpires in 2 hours.`;
 
     return await this.sendEmail({ to: newEmail, subject, html, text });
   }
