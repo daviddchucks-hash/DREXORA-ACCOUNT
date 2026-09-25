@@ -51,8 +51,8 @@
       e.preventDefault();
       hideAlert('alert');
 
-      const fullName = document.getElementById('fullName').value;
-      const email = document.getElementById('email').value;
+      const fullName = document.getElementById('fullName').value.trim();
+      const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
       const confirmPassword = document.getElementById('confirmPassword').value;
 
@@ -65,11 +65,12 @@
 
       try {
         const res = await API.post('/auth/register', { fullName, email, password, confirmPassword });
-        showAlert('alert', res.message, true);
-        document.getElementById('register-form').reset();
+        // Store unverified email for verification page
+        sessionStorage.setItem('pendingVerificationEmail', email);
+        // Navigate immediately to verification page
+        window.location.href = `verify-email.html?email=${encodeURIComponent(email)}`;
       } catch (err) {
         showAlert('alert', err.message);
-      } finally {
         setLoading('submit-btn', false);
       }
     });

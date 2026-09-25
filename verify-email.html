@@ -15,13 +15,17 @@
       <h1 class="page-title">Email Verification</h1>
       <p class="page-subtitle" id="subtitle-status">Enter the 8-digit verification code sent to your email.</p>
 
+      <div id="email-target-banner" style="display: none; background: #f3f4f6; padding: 10px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; color: #374151;">
+        Code sent to: <strong id="target-email-display"></strong>
+      </div>
+
       <div id="alert" class="alert"></div>
 
       <!-- 8-Digit Verification Form -->
       <form id="verify-code-form" style="margin-bottom: 24px;">
         <div class="form-group">
           <label for="code-input">8-Digit Verification Code</label>
-          <input type="text" id="code-input" maxlength="8" pattern="[0-9]{8}" placeholder="e.g. 84920153" required style="font-family: monospace; font-size: 18px; letter-spacing: 4px; text-align: center;">
+          <input type="text" id="code-input" maxlength="8" pattern="[0-9]{8}" placeholder="e.g. 84920153" required style="font-family: monospace; font-size: 20px; letter-spacing: 4px; text-align: center;">
         </div>
         <button type="submit" id="verify-btn" class="btn">Verify Account</button>
       </form>
@@ -32,7 +36,7 @@
 
       <div id="resend-section" style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 20px;">
         <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Request new verification code</h3>
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Didn't receive the email? Enter your email address below to resend.</p>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Didn't receive the email or code expired?</p>
         <form id="resend-form">
           <div class="form-group">
             <input type="email" id="resend-email" placeholder="Your account email address" required>
@@ -49,13 +53,33 @@
     const codeParam = urlParams.get('code') || urlParams.get('token');
     const action = urlParams.get('action');
 
-    // Auto-verify if code or token is provided in URL
-    if (codeParam) {
-      document.getElementById('code-input').value = codeParam.trim();
-      autoVerify(codeParam.trim());
+    // Resolve email address for display & resend
+    const urlEmail = urlParams.get('email');
+    const storedEmail = sessionStorage.getItem('pendingVerificationEmail');
+    const targetEmail = urlEmail || storedEmail || '';
+
+    if (targetEmail) {
+      document.getElementById('resend-email').value = targetEmail;
+      document.getElementById('target-email-display').textContent = maskEmail(targetEmail);
+      document.getElementById('email-target-banner').style.display = 'block';
     }
 
-    async function autoVerify(code) {
+    function maskEmail(email) {
+      if (!email || !email.includes('@')) return email;
+      const parts = email.split('@');
+      const name = parts[0];
+      const domain = parts[1];
+      if (name.length <= 2) return `${name[0]}*@${domain}`;
+      return `${name[0]}***${name[name.length - 1]}@${domain}`;
+    }
+
+    // Auto-verify if code/token is provided in URL
+    if (codeParam) {
+      document.getElementById('code-input').value = codeParam.trim();
+      submitVerification(codeParam.trim());
+    }
+
+    async function submitVerification(code) {
       hideAlert('alert');
       setLoading('verify-btn', true);
       document.getElementById('subtitle-status').textContent = 'Verifying your code...';
@@ -63,14 +87,20 @@
       try {
         const endpoint = action === 'email_change' ? '/auth/confirm-email-change' : '/auth/verify-email';
         const res = await API.post(endpoint, { code });
-        document.getElementById('subtitle-status').textContent = 'Verification complete.';
-        showAlert('alert', res.message, true);
+
+        document.getElementById('subtitle-status').textContent = 'Account verified successfully!';
+        showAlert('alert', res.message || 'Email verified successfully!', true);
         document.getElementById('action-container').style.display = 'block';
         document.getElementById('verify-code-form').style.display = 'none';
+        sessionStorage.removeItem('pendingVerificationEmail');
+
+        // Redirect to login page after 2 seconds
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
       } catch (err) {
-        document.getElementById('subtitle-status').textContent = 'Verification failed:';
-        showAlert('alert', err.message);
-      } finally {
+        document.getElementById('subtitle-status').textContent = 'Verification status:';
+        showAlert('alert', err.message || 'Invalid or expired verification code.');
         setLoading('verify-btn', false);
       }
     }
@@ -78,8 +108,11 @@
     document.getElementById('verify-code-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const code = document.getElementById('code-input').value.trim();
-      if (!code) return;
-      await autoVerify(code);
+      if (!code) {
+        showAlert('alert', 'Please enter your 8-digit verification code.');
+        return;
+      }
+      await submitVerification(code);
     });
 
     document.getElementById('resend-form').addEventListener('submit', async (e) => {
@@ -87,13 +120,16 @@
       hideAlert('alert');
       setLoading('resend-btn', true);
 
-      const email = document.getElementById('resend-email').value;
+      const email = document.getElementById('resend-email').value.trim();
 
       try {
         const res = await API.post('/auth/resend-verification', { email });
-        showAlert('alert', res.message, true);
+        sessionStorage.setItem('pendingVerificationEmail', email);
+        document.getElementById('target-email-display').textContent = maskEmail(email);
+        document.getElementById('email-target-banner').style.display = 'block';
+        showAlert('alert', res.message || 'A new 8-digit verification code has been sent.', true);
       } catch (err) {
-        showAlert('alert', err.message);
+        showAlert('alert', err.message || 'Failed to resend verification email.');
       } finally {
         setLoading('resend-btn', false);
       }
