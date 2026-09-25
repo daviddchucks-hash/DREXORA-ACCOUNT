@@ -25,11 +25,27 @@ app.use(helmet({
   }
 }));
 
-// CORS configuration - dynamically echoes requesting origin for allowed domains
+// CORS configuration - strict validation for credentials support
+const allowedExactOrigins = [
+  config.appUrl,
+  config.frontendUrl,
+  'https://drexora-account.onrender.com',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000'
+].filter(Boolean);
+
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    callback(null, origin);
+    if (
+      allowedExactOrigins.includes(origin) ||
+      origin.endsWith('.github.io') ||
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:')
+    ) {
+      return callback(null, origin);
+    }
+    return callback(new Error('CORS policy: Request origin not allowed'));
   },
   credentials: true
 }));

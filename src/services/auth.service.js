@@ -52,42 +52,49 @@ class AuthService {
       passwordHash
     });
 
-    // Generate single-use email verification token
-    const { rawToken } = await tokenService.createToken(
+    // Generate single-use 8-digit email verification code
+    const { rawToken: verificationCode } = await tokenService.createToken(
       'verificationTokens',
       { drexoraUserId: user.drexoraUserId, email: normalizedEmail },
-      VERIFICATION_TOKEN_TTL
+      VERIFICATION_TOKEN_TTL,
+      true // isNumericCode
     );
 
     // Send verification email
-    await emailService.sendVerificationEmail(normalizedEmail, rawToken, user.profile.fullName);
+    const emailRes = await emailService.sendVerificationEmail(normalizedEmail, verificationCode, user.profile.fullName);
+    if (!emailRes.success) {
+      console.warn(`[Registration Email Notice] User ${user.drexoraUserId} created, but email send failed: ${emailRes.error}`);
+    }
 
     return {
       drexoraUserId: user.drexoraUserId,
       email: user.profile.email,
       accountStatus: user.accountStatus,
-      message: 'Registration successful. Please verify your email before logging in.'
+      message: emailRes.success
+        ? 'Registration successful. An 8-digit verification code has been sent to your email.'
+        : 'Registration successful. Note: Email sending failed; click Resend Verification to try again.'
     };
   }
 
   /**
-   * Email Verification Flow
+   * Email Verification Flow (Supports 8-digit code or link token)
    */
-  async verifyEmail(rawToken) {
-    if (!rawToken) {
-      throw { status: 400, message: 'Verification token is required' };
+  async verifyEmail(rawTokenOrCode) {
+    if (!rawTokenOrCode || typeof rawTokenOrCode !== 'string') {
+      throw { status: 400, message: 'Verification code or link is required' };
     }
 
-    const result = await tokenService.verifyAndConsumeToken('verificationTokens', rawToken);
+    const trimmed = rawTokenOrCode.trim();
+    const result = await tokenService.verifyAndConsumeToken('verificationTokens', trimmed);
 
     if (!result.valid) {
       if (result.reason === 'already_used') {
-        throw { status: 400, message: 'This verification link has already been used.' };
+        throw { status: 400, message: 'This verification code or link has already been used. You can now log in.' };
       }
       if (result.reason === 'expired') {
-        throw { status: 400, message: 'Verification link has expired. Please request a new one.' };
+        throw { status: 400, message: 'Verification code has expired. Enter your email below to request a new one.' };
       }
-      throw { status: 400, message: 'Invalid or malformed verification link.' };
+      throw { status: 400, message: 'Invalid verification code. Please check your email and try again.' };
     }
 
     const { drexoraUserId } = result.data;
@@ -105,7 +112,7 @@ class AuthService {
 
     return {
       drexoraUserId: user.drexoraUserId,
-      message: 'Email address verified successfully. You can now log in.'
+      message: 'Email address verified successfully! You can now sign in to your Drexora Account.'
     };
   }
 
@@ -113,32 +120,36 @@ class AuthService {
    * Resend Verification Email Flow
    */
   async resendVerificationEmail(email) {
+    const genericResponse = { message: 'If an unverified account exists with that email address, a new 8-digit verification code has been sent.' };
+
+    if (!email) {
+      return genericResponse;
+    }
+
     const normalizedEmail = normalizeEmail(email);
     if (!isValidEmail(normalizedEmail)) {
-      // Safe generic message to avoid enumeration
-      return { message: 'If an unverified account exists with that email, a verification link has been sent.' };
+      return genericResponse;
     }
 
     const user = await userService.findByEmail(normalizedEmail);
-    if (!user || user.emailVerified) {
-      // Safe response against account enumeration
-      return { message: 'If an unverified account exists with that email, a verification link has been sent.' };
+    if (!user || user.emailVerified || user.accountStatus === 'suspended' || user.accountStatus === 'disabled') {
+      return genericResponse;
     }
 
-    // Check account status
-    if (user.accountStatus === 'suspended' || user.accountStatus === 'disabled') {
-      return { message: 'If an unverified account exists with that email, a verification link has been sent.' };
-    }
-
-    const { rawToken } = await tokenService.createToken(
+    const { rawToken: verificationCode } = await tokenService.createToken(
       'verificationTokens',
       { drexoraUserId: user.drexoraUserId, email: normalizedEmail },
-      VERIFICATION_TOKEN_TTL
+      VERIFICATION_TOKEN_TTL,
+      true // isNumericCode
     );
 
-    await emailService.sendVerificationEmail(normalizedEmail, rawToken, user.profile.fullName);
+    const emailRes = await emailService.sendVerificationEmail(normalizedEmail, verificationCode, user.profile.fullName);
 
-    return { message: 'If an unverified account exists with that email, a verification link has been sent.' };
+    if (!emailRes.success) {
+      console.warn(`[Resend Verification Notice] Email send failed: ${emailRes.error}`);
+    }
+
+    return genericResponse;
   }
 
   /**
@@ -152,7 +163,6 @@ class AuthService {
     const normalizedEmail = normalizeEmail(email);
     const user = await userService.findByEmail(normalizedEmail);
 
-    // Constant-time style generic failure message
     if (!user) {
       throw { status: 401, message: 'Invalid email or password' };
     }
@@ -162,7 +172,6 @@ class AuthService {
       throw { status: 401, message: 'Invalid email or password' };
     }
 
-    // Check account status
     if (user.accountStatus === 'suspended') {
       throw { status: 403, message: 'Your account has been suspended. Please contact support.' };
     }
@@ -175,11 +184,10 @@ class AuthService {
       throw {
         status: 403,
         code: 'EMAIL_UNVERIFIED',
-        message: 'Your email address is not verified. Please verify your email before logging in.'
+        message: 'Your email address is not verified. Please check your email for the 8-digit verification code.'
       };
     }
 
-    // Create multi-device server session
     const { rawSessionId, sessionData } = await sessionService.createSession(user.drexoraUserId, req);
 
     return {
@@ -231,7 +239,7 @@ class AuthService {
       throw { status: 400, message: passValidation.message };
     }
 
-    const result = await tokenService.verifyAndConsumeToken('passwordResetTokens', token);
+    const result = await tokenService.verifyAndConsumeToken('passwordResetTokens', token.trim());
     if (!result.valid) {
       if (result.reason === 'already_used') {
         throw { status: 400, message: 'This password reset link has already been used.' };
@@ -246,8 +254,6 @@ class AuthService {
     const newHash = await hashPassword(newPassword);
 
     await userService.updatePassword(drexoraUserId, newHash);
-
-    // Security practice: revoke existing sessions after password reset
     await sessionService.revokeAllUserSessions(drexoraUserId);
 
     await emailService.sendSecurityAlert(
@@ -287,7 +293,6 @@ class AuthService {
     const newHash = await hashPassword(newPassword);
     await userService.updatePassword(drexoraUserId, newHash);
 
-    // Revoke all other sessions for security, keep current session
     await sessionService.revokeAllOtherSessions(drexoraUserId, currentRawSessionId);
 
     await emailService.sendSecurityAlert(
@@ -324,7 +329,6 @@ class AuthService {
       throw { status: 400, message: 'Current password is incorrect' };
     }
 
-    // Check if new email already belongs to another user
     const existing = await userService.findByEmail(normalizedNewEmail);
     if (existing) {
       throw { status: 409, message: 'This email address is already in use by another account' };
@@ -332,26 +336,27 @@ class AuthService {
 
     await userService.setPendingEmail(drexoraUserId, normalizedNewEmail);
 
-    const { rawToken } = await tokenService.createToken(
+    const { rawToken: verificationCode } = await tokenService.createToken(
       'emailChangeTokens',
       { drexoraUserId, newEmail: normalizedNewEmail },
-      EMAIL_CHANGE_TOKEN_TTL
+      EMAIL_CHANGE_TOKEN_TTL,
+      true
     );
 
-    await emailService.sendEmailChangeVerification(normalizedNewEmail, rawToken, user.profile.fullName);
+    await emailService.sendEmailChangeVerification(normalizedNewEmail, verificationCode, user.profile.fullName);
 
-    return { message: `Verification email sent to ${normalizedNewEmail}. Please confirm to complete the email change.` };
+    return { message: `Verification code sent to ${normalizedNewEmail}. Please enter the code to confirm the email change.` };
   }
 
   /**
    * Confirm Email Change Flow
    */
-  async confirmEmailChange(rawToken) {
-    if (!rawToken) throw { status: 400, message: 'Token is required' };
+  async confirmEmailChange(rawCodeOrToken) {
+    if (!rawCodeOrToken) throw { status: 400, message: 'Verification code or token is required' };
 
-    const result = await tokenService.verifyAndConsumeToken('emailChangeTokens', rawToken);
+    const result = await tokenService.verifyAndConsumeToken('emailChangeTokens', rawCodeOrToken.trim());
     if (!result.valid) {
-      throw { status: 400, message: 'Invalid or expired email change verification link' };
+      throw { status: 400, message: 'Invalid or expired email change verification code' };
     }
 
     const { drexoraUserId, newEmail } = result.data;

@@ -13,20 +13,29 @@
         <a href="index.html" class="brand-title">Drexora Account</a>
       </div>
       <h1 class="page-title">Email Verification</h1>
-      <p class="page-subtitle" id="subtitle-status">Verifying your request...</p>
+      <p class="page-subtitle" id="subtitle-status">Enter the 8-digit verification code sent to your email.</p>
 
       <div id="alert" class="alert"></div>
+
+      <!-- 8-Digit Verification Form -->
+      <form id="verify-code-form" style="margin-bottom: 24px;">
+        <div class="form-group">
+          <label for="code-input">8-Digit Verification Code</label>
+          <input type="text" id="code-input" maxlength="8" pattern="[0-9]{8}" placeholder="e.g. 84920153" required style="font-family: monospace; font-size: 18px; letter-spacing: 4px; text-align: center;">
+        </div>
+        <button type="submit" id="verify-btn" class="btn">Verify Account</button>
+      </form>
 
       <div id="action-container" style="display: none; margin-top: 20px;">
         <a href="login.html" class="btn">Proceed to Sign In</a>
       </div>
 
       <div id="resend-section" style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 20px;">
-        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Request new link</h3>
-        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Need a new verification link? Enter your email address below.</p>
+        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">Request new verification code</h3>
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;">Didn't receive the email? Enter your email address below to resend.</p>
         <form id="resend-form">
           <div class="form-group">
-            <input type="email" id="resend-email" placeholder="Your email address" required>
+            <input type="email" id="resend-email" placeholder="Your account email address" required>
           </div>
           <button type="submit" id="resend-btn" class="btn btn-secondary">Resend Verification Email</button>
         </form>
@@ -37,28 +46,41 @@
   <script src="js/app.js"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
+    const codeParam = urlParams.get('code') || urlParams.get('token');
     const action = urlParams.get('action');
 
-    async function processVerification() {
-      if (!token) {
-        document.getElementById('subtitle-status').textContent = 'Please check your email for the verification link or request a new one.';
-        return;
-      }
+    // Auto-verify if code or token is provided in URL
+    if (codeParam) {
+      document.getElementById('code-input').value = codeParam.trim();
+      autoVerify(codeParam.trim());
+    }
+
+    async function autoVerify(code) {
+      hideAlert('alert');
+      setLoading('verify-btn', true);
+      document.getElementById('subtitle-status').textContent = 'Verifying your code...';
 
       try {
         const endpoint = action === 'email_change' ? '/auth/confirm-email-change' : '/auth/verify-email';
-        const res = await API.post(endpoint, { token });
-        document.getElementById('subtitle-status').textContent = 'Verification completed.';
+        const res = await API.post(endpoint, { code });
+        document.getElementById('subtitle-status').textContent = 'Verification complete.';
         showAlert('alert', res.message, true);
         document.getElementById('action-container').style.display = 'block';
+        document.getElementById('verify-code-form').style.display = 'none';
       } catch (err) {
-        document.getElementById('subtitle-status').textContent = 'Verification could not be completed.';
+        document.getElementById('subtitle-status').textContent = 'Verification failed:';
         showAlert('alert', err.message);
+      } finally {
+        setLoading('verify-btn', false);
       }
     }
 
-    processVerification();
+    document.getElementById('verify-code-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = document.getElementById('code-input').value.trim();
+      if (!code) return;
+      await autoVerify(code);
+    });
 
     document.getElementById('resend-form').addEventListener('submit', async (e) => {
       e.preventDefault();

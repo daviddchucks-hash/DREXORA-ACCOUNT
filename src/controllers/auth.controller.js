@@ -16,7 +16,7 @@ class AuthController {
 
   async verifyEmail(req, res, next) {
     try {
-      const token = req.query.token || req.body.token;
+      const token = req.query.token || req.query.code || req.body.token || req.body.code;
       const result = await authService.verifyEmail(token);
       res.json(result);
     } catch (error) {
@@ -123,7 +123,7 @@ class AuthController {
 
   async confirmEmailChange(req, res, next) {
     try {
-      const token = req.query.token || req.body.token;
+      const token = req.query.token || req.query.code || req.body.token || req.body.code;
       const result = await authService.confirmEmailChange(token);
       res.json(result);
     } catch (error) {

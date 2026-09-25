@@ -4,6 +4,7 @@ module.exports = {
   port: process.env.PORT || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
   appUrl: process.env.APP_URL || 'https://drexora-account.onrender.com',
+  frontendUrl: process.env.FRONTEND_URL || process.env.APP_URL || 'https://drexora-account.onrender.com',
   session: {
     secret: process.env.SESSION_SECRET || 'drexora_default_dev_session_secret_change_me',
     maxAgeDays: parseInt(process.env.SESSION_MAX_AGE_DAYS || '14', 10),
@@ -17,7 +18,7 @@ module.exports = {
   },
   resend: {
     apiKey: process.env.RESEND_API_KEY,
-    from: process.env.EMAIL_FROM || 'Drexora Account <no-reply@drexora.com>'
+    from: process.env.EMAIL_FROM || 'Drexora Account <no-reply@drexxora.name.ng>'
   },
   security: {
     rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
