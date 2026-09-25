@@ -1,6 +1,9 @@
 const db = require('../db/firebase');
+const auditService = require('./audit.service');
+const emailService = require('./email.service');
 const { generateDrexoraUserId } = require('../utils/id.generator');
 const { normalizeEmail } = require('../utils/validator.util');
+const { verifyPassword } = require('../utils/password.util');
 
 class UserService {
   /**
@@ -141,6 +144,84 @@ class UserService {
     await db.update(`users/${drexoraUserId}/profile`, {
       pendingEmail: normalizeEmail(pendingEmail)
     });
+  }
+
+  /**
+   * Performs safe account deletion workflow for an authenticated user.
+   */
+  async deleteAccount(user, password) {
+    if (!password) {
+      throw { status: 400, error: 'invalid_request', error_description: 'Password confirmation is required to delete account' };
+    }
+
+    const isValidPassword = await verifyPassword(password, user.security.passwordHash);
+    if (!isValidPassword) {
+      throw { status: 400, error: 'invalid_credentials', error_description: 'Password verification failed. Incorrect password.' };
+    }
+
+    const drexoraUserId = user.drexoraUserId;
+    const userEmail = user.profile.email;
+
+    // 1. Revoke all active user sessions
+    const sessionService = require('./session.service');
+    await sessionService.revokeAllUserSessions(drexoraUserId);
+
+    // 2. Revoke all OAuth consents and tokens for this user
+    await db.remove(`oauthConsents/${drexoraUserId}`);
+
+    const allTokens = await db.get('oauthTokens');
+    if (allTokens) {
+      for (const [tokenHash, tokenRecord] of Object.entries(allTokens)) {
+        if (tokenRecord.drexoraUserId === drexoraUserId && !tokenRecord.revoked) {
+          await db.update(`oauthTokens/${tokenHash}`, {
+            revoked: true,
+            revokedAt: Date.now(),
+            revokedReason: 'user_account_deleted'
+          });
+        }
+      }
+    }
+
+    // 3. Disable developer applications owned by user
+    const clients = await db.get('oauthClients');
+    if (clients) {
+      for (const [clientId, client] of Object.entries(clients)) {
+        if (client.owner && client.owner.ownerId === drexoraUserId) {
+          await db.update(`oauthClients/${clientId}`, {
+            status: 'disabled',
+            verificationStatus: 'rejected',
+            updatedAt: Date.now()
+          });
+        }
+      }
+    }
+
+    // 4. Remove email index entry
+    await db.remove(`emailIndex/${encodeEmailForDb(userEmail)}`);
+
+    // 5. Update user status to 'disabled' / 'deleted'
+    await db.update(`users/${drexoraUserId}`, {
+      accountStatus: 'disabled',
+      emailVerified: false,
+      'profile/fullName': 'Deleted User',
+      'profile/email': `deleted_${drexoraUserId}@deleted.drexora.com`,
+      'security/passwordHash': 'DELETED'
+    });
+
+    // 6. Log audit event
+    await auditService.logEvent({
+      event: 'account.deleted',
+      userId: drexoraUserId
+    });
+
+    // 7. Send security alert
+    emailService.sendSecurityAlert(
+      userEmail,
+      'Account Deleted',
+      'Your Drexora Account has been permanently closed and all active sessions and application permissions have been revoked.'
+    ).catch(() => {});
+
+    return { status: 'success', message: 'Your account has been successfully deleted.' };
   }
 
   /**

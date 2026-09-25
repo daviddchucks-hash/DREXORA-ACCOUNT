@@ -1,5 +1,7 @@
 const userService = require('../services/user.service');
 const sessionService = require('../services/session.service');
+const config = require('../config');
+const { clearCookieOptions } = require('../middleware/auth.middleware');
 
 class AccountController {
   async getProfile(req, res, next) {
@@ -50,6 +52,20 @@ class AccountController {
       const count = await sessionService.revokeAllOtherSessions(req.user.drexoraUserId, req.rawSessionId);
       res.json({ message: `Successfully logged out ${count} other device(s)` });
     } catch (error) {
+      next(error);
+    }
+  }
+
+  async deleteAccount(req, res, next) {
+    try {
+      const { password } = req.body;
+      const result = await userService.deleteAccount(req.user, password);
+      res.clearCookie(config.session.cookieName, clearCookieOptions(req));
+      res.status(200).json(result);
+    } catch (error) {
+      if (error.error) {
+        return res.status(error.status || 400).json({ error: error.error_description || error.error });
+      }
       next(error);
     }
   }
