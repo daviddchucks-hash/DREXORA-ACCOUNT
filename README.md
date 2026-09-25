@@ -1,12 +1,29 @@
-# Drexora Account — Step 1: Core Account System
+# Drexora Account & Platform Layer — Complete Identity System
 
-A custom-built, standalone core account and identity management system built from scratch using **Node.js**, **Express.js**, **Vanilla HTML/CSS/JS**, **Firebase Realtime Database**, and **Resend**.
+A custom-built, standalone core account, identity, and application platform built from scratch using **Node.js**, **Express.js**, **Vanilla HTML/CSS/JS**, **Firebase Realtime Database**, and **Resend**.
+
+---
+
+## 📚 Continue with Drexora Integration Documentation
+
+To integrate **Continue with Drexora** into another web or mobile application (internal product or third-party) without modifying Drexora Account source code, consult the official documentation in the `docs/` folder:
+
+* 📖 **[Official Integration Guide](docs/continue-with-drexora.md):** Complete developer guide covering architecture, PKCE SSO flow, callbacks, database mapping, and code examples.
+* 🤖 **[Master AI Prompt](docs/continue-with-drexora-ai-prompt.md):** Reusable prompt to instruct another coding AI (Jules, Cursor, ChatGPT, etc.) to integrate Drexora SSO into any target repository.
+* ⚡ **[Quick-Start Checklist](docs/continue-with-drexora-quick-start.md):** Concise 10-step checklist for experienced developers.
+* ✅ **[Integration Checklist](docs/continue-with-drexora-checklist.md):** Phase-by-phase verification checklist.
+* 🛠️ **[Technical Protocol & API Reference](docs/continue-with-drexora-reference.md):** OIDC Discovery, JWKS, token exchange, UserInfo, and revocation API specs.
 
 ---
 
 ## 🌟 Key Features
 
 1. **Permanent Drexora User ID**: Each account receives an immutable, secure, non-sequential user ID (e.g., `dx_8f72abc123`) that remains constant even if the user changes their email address.
+2. **Developer & Application Portal**: Self-service application management allowing developers to register public/confidential applications, configure HTTPS redirect URIs, manage allowed scopes, rotate client secrets, and view personalized integration guides.
+3. **Connected Applications & Consent Revocation**: Logged-in users can view all authorized applications, inspect granted permissions, and revoke access instantly with real-time token invalidation.
+4. **Product Registry, Product Access & Entitlements**: Platform foundation supporting products (`Drexora Support`, `Handles`, `Drexora AI`, `Drexora Transfer`, `Drexora Guard`), user product access, entitlements, and subscription structures.
+5. **Security Audit Logging & Notifications**: Sanitized audit trail (`auditLogs/`) recording non-sensitive security events and sending automated security alerts via Resend.
+6. **Safe Account Deletion**: Password-confirmed account closure workflow that revokes all active device sessions, OAuth tokens, and app permissions while anonymizing user identity.
 2. **Custom Backend Authentication**:
    - Argon2id password hashing with bcrypt fallback.
    - Normalized email handling & duplicate prevention.
@@ -157,6 +174,18 @@ emailChangeTokens/
 | `GET` | `/api/account/sessions` | List active sessions & devices |
 | `DELETE` | `/api/account/sessions/:id` | Revoke specific session ID |
 | `POST` | `/api/account/sessions/revoke-others` | Revoke all other active device sessions |
+| `GET` | `/api/account/connected-apps` | List authorized applications and granted permissions |
+| `DELETE` | `/api/account/connected-apps/:id` | Revoke application access & invalidate tokens |
+| `POST` | `/api/account/delete` | Permanently delete user account with password verification |
+| `GET` | `/api/developer/scopes` | List global platform scope registry |
+| `GET` | `/api/developer/applications` | List applications owned by authenticated user |
+| `POST` | `/api/developer/applications` | Register a new application |
+| `GET` | `/api/developer/applications/:id` | View application details (strict ownership check) |
+| `PATCH` | `/api/developer/applications/:id` | Update application configuration |
+| `POST` | `/api/developer/applications/:id/rotate-secret` | Rotate confidential client secret |
+| `DELETE` | `/api/developer/applications/:id` | Disable owned application |
+| `GET` | `/api/platform/products` | List registered platform products |
+| `GET` | `/api/platform/my-access` | View user product access, entitlements, and subscriptions |
 
 ---
 
