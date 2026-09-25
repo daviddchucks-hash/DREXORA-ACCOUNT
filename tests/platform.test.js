@@ -1,3 +1,5 @@
+process.env.NODE_ENV = 'test';
+
 const { test, describe, before } = require('node:test');
 const assert = require('node:assert/strict');
 const request = require('supertest');
@@ -348,6 +350,100 @@ describe('Drexora Platform Layer & Security Comprehensive Test Suite', () => {
         .send({ email: 'deleteme@example.com', password: 'Password123!' });
 
       assert.equal(loginAttempt.status, 401);
+    });
+  });
+
+  describe('7. Dynamic Onboarding End-to-End SSO Flow (Zero Source Code Modification Requirement)', () => {
+    let dynamicAppId = '';
+    let dynamicAppSecret = '';
+    let dynamicAppToken = '';
+
+    test('1. Onboard a brand new application dynamically via Developer Portal API', async () => {
+      const res = await request(app)
+        .post('/api/developer/applications')
+        .set('Cookie', devACookie)
+        .send({
+          name: 'Test External Application',
+          description: 'A completely new external application onboarded dynamically',
+          websiteUrl: 'https://newapp.example.com',
+          logoUrl: 'https://newapp.example.com/logo.png',
+          clientType: 'confidential',
+          appType: 'external_application',
+          redirectUris: ['https://newapp.example.com/oauth/callback'],
+          allowedScopes: ['openid', 'profile', 'email']
+        });
+
+      assert.equal(res.status, 201);
+      assert.ok(res.body.application.clientId);
+      assert.ok(res.body.application.clientSecret);
+      assert.equal(res.body.application.name, 'Test External Application');
+
+      dynamicAppId = res.body.application.clientId;
+      dynamicAppSecret = res.body.application.clientSecret;
+    });
+
+    test('2. Execute full OAuth SSO flow for newly onboarded app with PKCE without source code changes', async () => {
+      const crypto = require('crypto');
+      const verifier = 'dKn72bZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXkX';
+      const challenge = crypto.createHash('sha256').update(verifier).digest('base64url');
+
+      const authorizeRes = await request(app)
+        .get(`/oauth/authorize?client_id=${dynamicAppId}&redirect_uri=https://newapp.example.com/oauth/callback&response_type=code&scope=openid%20profile%20email&state=dyn_state_999&code_challenge=${challenge}&code_challenge_method=S256&consent=approved`)
+        .set('Cookie', userCookie);
+
+      assert.equal(authorizeRes.status, 302);
+      const redirectUrl = new URL(authorizeRes.headers['location']);
+      const code = redirectUrl.searchParams.get('code');
+      assert.ok(code);
+
+      // Token exchange with confidential client credentials + PKCE verifier
+      const tokenRes = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: 'https://newapp.example.com/oauth/callback',
+          client_id: dynamicAppId,
+          client_secret: dynamicAppSecret,
+          code_verifier: verifier
+        });
+
+      assert.equal(tokenRes.status, 200);
+      assert.ok(tokenRes.body.access_token);
+      assert.ok(tokenRes.body.id_token);
+      dynamicAppToken = tokenRes.body.access_token;
+
+      // UserInfo verification
+      const userInfoRes = await request(app)
+        .get('/oauth/userinfo')
+        .set('Authorization', `Bearer ${dynamicAppToken}`);
+
+      assert.equal(userInfoRes.status, 200);
+      assert.equal(userInfoRes.body.sub, userObj.drexoraUserId);
+      assert.equal(userInfoRes.body.email, 'charlie.user@example.com');
+    });
+
+    test('3. Verify dynamic application appears in user Connected Apps list', async () => {
+      const res = await request(app)
+        .get('/api/account/connected-apps')
+        .set('Cookie', userCookie);
+
+      assert.equal(res.status, 200);
+      assert.ok(res.body.connectedApps.some(app => app.clientId === dynamicAppId && app.applicationName === 'Test External Application'));
+    });
+
+    test('4. Revoke access for dynamic application and confirm token invalidation', async () => {
+      const revokeRes = await request(app)
+        .delete(`/api/account/connected-apps/${dynamicAppId}`)
+        .set('Cookie', userCookie);
+
+      assert.equal(revokeRes.status, 200);
+
+      const userInfoCheck = await request(app)
+        .get('/oauth/userinfo')
+        .set('Authorization', `Bearer ${dynamicAppToken}`);
+
+      assert.equal(userInfoCheck.status, 401);
     });
   });
 });

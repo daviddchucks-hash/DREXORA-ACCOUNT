@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Developer Integration Guide — Drexora Account</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    code {
+      background: #f3f4f6;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    pre {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 16px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 13px;
+      font-family: monospace;
+      margin: 12px 0 20px 0;
+      line-height: 1.45;
+    }
+    .doc-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 13px;
+    }
+    .doc-table th, .doc-table td {
+      border: 1px solid var(--border-color);
+      padding: 10px 12px;
+      text-align: left;
+    }
+    .doc-table th {
+      background: #f8fafc;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav-bar">
+    <div class="nav-container">
+      <a href="account.html" class="brand-title">Drexora Account</a>
+      <div class="nav-links">
+        <a href="account.html" class="nav-link">Profile</a>
+        <a href="security.html" class="nav-link">Security</a>
+        <a href="sessions.html" class="nav-link">Sessions</a>
+        <a href="connected-apps.html" class="nav-link">Connected Apps</a>
+        <a href="developer.html" class="nav-link">Developer</a>
+        <a href="developer-docs.html" class="nav-link active">Docs</a>
+        <a href="#" onclick="handleLogout(); return false;" class="nav-link" style="color: var(--danger-color);">Sign Out</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="dashboard-wrapper" style="max-width: 900px;">
+    <h1 class="page-title">Developer Integration Documentation</h1>
+    <p class="page-subtitle">Learn how to authenticate users with "Continue with Drexora" using OAuth 2.0 & OpenID Connect (OIDC).</p>
+
+    <div class="card-section">
+      <h2 class="section-title">1. Introduction</h2>
+      <p style="margin-bottom: 12px;">
+        <strong>Drexora Account</strong> functions as a centralized identity provider (IdP). Every user has a permanent, immutable Drexora User ID starting with <code>dx_</code> (e.g. <code>dx_8f72abc123</code>).
+      </p>
+      <p>
+        Applications authenticate users using the standard <strong>Authorization Code Flow with PKCE (Proof Key for Code Exchange)</strong>.
+      </p>
+    </div>
+
+    <div class="card-section">
+      <h2 class="section-title">2. Integration Overview</h2>
+      <pre>
+┌──────────────────┐           ┌──────────────────┐           ┌──────────────────┐
+│   Your App       │           │ Drexora Account  │           │   Your Server    │
+└────────┬─────────┘           └────────┬─────────┘           └────────┬─────────┘
+         │                              │                              │
+         │ 1. GET /oauth/authorize      │                              │
+         ├─────────────────────────────►│                              │
+         │ (Redirect to SSO)            │                              │
+         │                              │ (User Logs In & Consents)    │
+         │                              │                              │
+         │ 2. Callback with ?code=dx_.. │                              │
+         │◄─────────────────────────────┤                              │
+         │                              │                              │
+         │ 3. Send authorization code   │                              │
+         ├──────────────────────────────┼─────────────────────────────►│
+         │                              │                              │
+         │                              │ 4. POST /oauth/token         │
+         │                              │◄─────────────────────────────┤
+         │                              │ (Exchange Code for Tokens)   │
+         │                              │                              │
+         │                              │ 5. Return Access Token & ID  │
+         │                              ├─────────────────────────────►│
+         │                              │                              │
+         │                              │ 6. GET /oauth/userinfo       │
+         │                              │◄─────────────────────────────┤
+         │                              │                              │
+         │                              │ 7. Return Claims (sub, email)│
+         │                              ├─────────────────────────────►│
+      </pre>
+    </div>
+
+    <div class="card-section">
+      <h2 class="section-title">3. API Endpoints Reference</h2>
+
+      <h3>A. Discovery Endpoint</h3>
+      <p><code>GET /.well-known/openid-configuration</code></p>
+      <p style="margin-top: 6px;">OpenID Connect configuration document advertising endpoints and capabilities.</p>
+
+      <h3 style="margin-top: 16px;">B. Authorization Endpoint</h3>
+      <p><code>GET /oauth/authorize</code></p>
+      <p style="margin-top: 6px;">Initiates user login and consent screen.</p>
+
+      <table class="doc-table">
+        <thead>
+          <tr>
+            <th>Parameter</th>
+            <th>Type</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>client_id</code></td>
+            <td>Required</td>
+            <td>Your registered Client ID (e.g. <code>dx_client_123456</code>)</td>
+          </tr>
+          <tr>
+            <td><code>redirect_uri</code></td>
+            <td>Required</td>
+            <td>Must match one of your registered redirect URIs exactly</td>
+          </tr>
+          <tr>
+            <td><code>response_type</code></td>
+            <td>Required</td>
+            <td>Must be <code>code</code></td>
+          </tr>
+          <tr>
+            <td><code>scope</code></td>
+            <td>Required</td>
+            <td>Space-separated scopes: <code>openid profile email</code></td>
+          </tr>
+          <tr>
+            <td><code>state</code></td>
+            <td>Required</td>
+            <td>Cryptographically random string to prevent CSRF</td>
+          </tr>
+          <tr>
+            <td><code>code_challenge</code></td>
+            <td>Required (Public)</td>
+            <td>Base64url encoded SHA-256 hash of PKCE verifier</td>
+          </tr>
+          <tr>
+            <td><code>code_challenge_method</code></td>
+            <td>Optional</td>
+            <td>Defaults to <code>S256</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 24px;">C. Token Exchange Endpoint</h3>
+      <p><code>POST /oauth/token</code></p>
+      <p style="margin-top: 6px;">Exchanges the single-use authorization code for Access Token and OIDC ID Token.</p>
+
+      <pre>POST /oauth/token HTTP/1.1
+Host: drexora-account.onrender.com
+Content-Type: application/json
+
+{
+  "grant_type": "authorization_code",
+  "code": "dx_code_123456789",
+  "redirect_uri": "https://yourapp.com/callback",
+  "client_id": "dx_client_123456",
+  "code_verifier": "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
+}</pre>
+
+      <h3 style="margin-top: 24px;">D. UserInfo Endpoint</h3>
+      <p><code>GET /oauth/userinfo</code></p>
+      <p style="margin-top: 6px;">Returns authenticated user claims based on granted scopes.</p>
+
+      <pre>GET /oauth/userinfo HTTP/1.1
+Host: drexora-account.onrender.com
+Authorization: Bearer dx_at_9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d
+
+Response:
+{
+  "sub": "dx_8f72abc123",
+  "name": "Jane Doe",
+  "email": "jane.doe@example.com",
+  "email_verified": true
+}</pre>
+    </div>
+
+    <div class="card-section">
+      <h2 class="section-title">4. Security Guidelines</h2>
+      <ul style="padding-left: 20px; line-height: 1.8;">
+        <li><strong>Exact Redirect Matching:</strong> Wildcards are strictly prohibited. The <code>redirect_uri</code> parameter must match your registered URI character-for-character.</li>
+        <li><strong>PKCE Protection:</strong> Always use PKCE (<code>S256</code>) to protect against code interception.</li>
+        <li><strong>Client Secret Protection:</strong> Never expose client secrets in client-side HTML or JavaScript. Confidential clients must execute token exchanges on secure backend servers.</li>
+        <li><strong>Immutable User Identifier:</strong> Always key local user records to <code>sub</code> (the permanent Drexora User ID starting with <code>dx_</code>), never to email address.</li>
+      </ul>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+</body>
+</html>
