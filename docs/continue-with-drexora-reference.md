@@ -127,6 +127,14 @@ This document provides complete protocol and API endpoint specifications for **D
 
 ---
 
+## 🔒 Session Security & Callback Redirection Best Practices
+
+* **Custom Domain Alignment:** Always configure `redirect_uri` to target the custom domain where the user will be logged in (e.g. `https://drexorasupport.name.ng/auth/drexora/callback`). Avoid registering hosting platform URLs (like `.onrender.com`) if the frontend is served on a custom domain, as browser cookie isolation will prevent the session cookie from reaching the custom domain.
+* **Prohibit Credentials in URLs:** Never pass `sso_token`, access tokens, or session tokens in URL query strings (e.g. `/login?sso_token=...`).
+* **Cross-Origin Session Handoff:** For separate backend/frontend origins, use a server-side short-lived, single-use ticket exchange endpoint (`POST /api/auth/exchange-ticket`) to set cross-origin HttpOnly cookies securely.
+
+---
+
 ## 🛡️ Supported Scopes & Granted Claims
 
 * `openid`: Grants `sub` (permanent Drexora User ID starting with `dx_`).
