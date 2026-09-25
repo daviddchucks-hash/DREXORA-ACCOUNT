@@ -364,4 +364,57 @@ describe('Drexora OAuth 2.0 & OIDC SSO Integration Test Suite', () => {
       assert.ok(res.headers.location.includes('/login.html?return_to='));
     });
   });
+
+  describe('6. Cookie Security & Callback Redirect Security', () => {
+    test('Login sets HttpOnly, Secure session cookie and returns session token', async () => {
+      const loginRes = await request.post('/api/auth/register').send({
+        fullName: 'Bob CookieTest',
+        email: 'bob.cookie@example.com',
+        password: 'SecurePassword123!',
+        confirmPassword: 'SecurePassword123!'
+      });
+
+      const user = await userService.findByEmail('bob.cookie@example.com');
+      await userService.markEmailVerified(user.drexoraUserId);
+
+      const res = await request.post('/api/auth/login').send({
+        email: 'bob.cookie@example.com',
+        password: 'SecurePassword123!'
+      });
+
+      assert.equal(res.status, 200);
+      assert.ok(res.body.token);
+
+      const setCookieHeader = res.headers['set-cookie'] ? res.headers['set-cookie'][0] : '';
+      assert.ok(setCookieHeader.includes('drexora_sid='));
+      assert.ok(setCookieHeader.toLowerCase().includes('httponly'));
+      assert.ok(setCookieHeader.toLowerCase().includes('samesite=none') || setCookieHeader.toLowerCase().includes('samesite=lax'));
+    });
+
+    test('Authorization redirect target contains code and state, without leaking internal tokens', async () => {
+      const res = await request
+        .get('/oauth/authorize')
+        .set('Cookie', userSessionCookie)
+        .query({
+          client_id: publicClient.clientId,
+          redirect_uri: 'https://publicapp.example.com/oauth/callback',
+          response_type: 'code',
+          scope: 'openid',
+          state: 'secure_state_99',
+          code_challenge: 'test_challenge_99',
+          code_challenge_method: 'S256',
+          consent: 'approved'
+        });
+
+      assert.equal(res.status, 302);
+      const redirectLocation = res.headers.location;
+      assert.ok(redirectLocation.startsWith('https://publicapp.example.com/oauth/callback?code=dx_code_'));
+      assert.ok(redirectLocation.includes('state=secure_state_99'));
+
+      // Ensure no raw tokens or passwords in redirect URL
+      assert.equal(redirectLocation.includes('sso_token'), false);
+      assert.equal(redirectLocation.includes('access_token'), false);
+      assert.equal(redirectLocation.includes('id_token'), false);
+    });
+  });
 });

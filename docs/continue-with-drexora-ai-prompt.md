@@ -36,6 +36,7 @@ DISCOVERY URL:
 4. DO NOT expose client secrets in frontend JavaScript or HTML. Keep client secrets strictly in server-side environment variables.
 5. ALWAYS implement PKCE (`S256`) and state verification to prevent Authorization Code Interception and Cross-Site Request Forgery (CSRF) attacks.
 6. DO NOT automatically merge existing local accounts based solely on matching email addresses unless the user confirms ownership by authenticating with their local password.
+7. DO NOT expose session tokens, access tokens, or credentials in browser URLs (e.g. `/login?sso_token=...`). Ensure the callback URL matches the primary application domain so session cookies are scoped to the custom domain, avoiding cross-domain cookie isolation and SSO redirect loops.
 
 ---
 

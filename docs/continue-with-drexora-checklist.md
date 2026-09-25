@@ -37,7 +37,7 @@ Use this checklist to track your application's integration with **Continue with 
 - [ ] UserInfo fetched from `${DREXORA_ISSUER_URL}/oauth/userinfo` with Bearer token.
 - [ ] Immutable Drexora User ID (`sub`, e.g. `dx_8f72abc123`) extracted.
 - [ ] Local user record created/matched using `drexora_sub` column (NOT email address).
-- [ ] Secure local application session cookie established.
+- [ ] Secure local application session cookie established on primary domain (never passing `sso_token` or credentials in URL parameters).
 
 ---
 
@@ -50,6 +50,7 @@ Use this checklist to track your application's integration with **Continue with 
 
 ### Phase 6: Security & Production Audit
 - [ ] No client secrets exposed in frontend JavaScript, HTML, or git commits.
-- [ ] Production redirect URIs enforce HTTPS.
+- [ ] Production redirect URIs enforce HTTPS and match primary custom domain.
 - [ ] No wildcard redirect URIs used.
+- [ ] No authentication tokens or credentials passed in URL query strings (e.g. `/login?sso_token=...`).
 - [ ] All 46+ repository unit and integration tests pass cleanly.

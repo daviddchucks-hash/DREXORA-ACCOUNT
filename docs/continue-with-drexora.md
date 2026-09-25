@@ -317,7 +317,33 @@ app.post('/api/auth/drexora/callback', express.json(), async (req, res) => {
 
 ---
 
-## 12. Supported Scopes
+## 12. Cross-Domain Cookie Isolation & SSO Redirect Loop Resolution
+
+### Root Cause Analysis of SSO Redirect Loops
+When integrating Drexora SSO into an application hosted across custom domains (e.g. `drexorasupport.name.ng`) and hosting platform URLs (e.g. `drexorasupport-1.onrender.com`), a common pitfall is a **domain mismatch in cookie scope**.
+
+1. **The Issue:**
+   If the OAuth callback handler is configured to execute on the platform URL (`https://drexorasupport-1.onrender.com/auth/drexora/callback`), any local session cookie issued by the callback is bound to `drexorasupport-1.onrender.com`. When the backend redirects the browser to the custom domain (`https://drexorasupport.name.ng/dashboard`), the browser refuses to send the Render-scoped cookie to the custom domain.
+2. **The Resulting Redirect Loop:**
+   Upon loading `https://drexorasupport.name.ng`, the application sees no session cookie and considers the user unauthenticated. If the application then redirects back to `/login` or attempts to hand off credentials via URL parameters like `/login?sso_token=[TOKEN]`, the login page re-triggers the OAuth authorization flow, producing an **infinite SSO redirect loop**.
+
+### Security Rules for SSO Session Handoff
+* ❌ **NEVER expose authentication credentials in URLs:** Do NOT redirect to `/login?sso_token=...` or put access tokens, ID tokens, session tokens, or credentials in query parameters.
+* ❌ **NEVER store tokens in localStorage merely for URL handoff:** Tokens stored in localStorage or exposed in URLs are vulnerable to XSS and token leakage via referrer headers/history logs.
+* ✅ **Align Redirect URI with Primary Application Domain:** Set `DREXORA_REDIRECT_URI` to target the custom domain directly (e.g., `https://drexorasupport.name.ng/auth/drexora/callback`). This ensures the callback request executes on the custom domain and sets the session cookie on `drexorasupport.name.ng`.
+* ✅ **Use Same Session System for Normal & SSO Login:** Once UserInfo is fetched and mapped to the local user record, create the local session cookie using the exact same session creation mechanism used for normal email/password login, then redirect directly to `/dashboard`.
+
+### Secure Cross-Origin Ticket Exchange Pattern (If Frontend & Backend Origins Differ)
+If the backend API and frontend SPA must remain on strictly different origins:
+1. **Generate Single-Use Ticket:** Backend callback generates a cryptographically random, short-lived (30s) `handoff_ticket` stored in Redis/DB.
+2. **Redirect to Frontend:** Redirect browser to `https://drexorasupport.name.ng/auth/handoff?ticket=HANDOFF_TICKET`.
+3. **Frontend Exchange Request:** Frontend immediately executes `POST /api/auth/exchange-ticket` with `{ ticket }` and `credentials: 'include'`.
+4. **Issue Cookie & Invalidate Ticket:** Backend validates, deletes the ticket, and issues the HttpOnly cross-origin cookie (`SameSite=None; Secure`).
+5. **Clean URL & Navigate:** Frontend removes `ticket` via `history.replaceState` and navigates to `/dashboard`.
+
+---
+
+## 13. Supported Scopes
 
 | Scope | Granted Claims | Purpose |
 | :--- | :--- | :--- |
@@ -330,7 +356,7 @@ app.post('/api/auth/drexora/callback', express.json(), async (req, res) => {
 
 ---
 
-## 13. Token Revocation & Logout
+## 14. Token Revocation & Logout
 
 ### Token Revocation
 To revoke an access token when a user logs out:

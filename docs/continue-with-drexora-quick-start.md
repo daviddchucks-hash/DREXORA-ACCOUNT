@@ -9,7 +9,7 @@ This quick-start checklist summarizes the steps for experienced developers integ
 1. **Register Application:**
    Log in to Drexora Account, navigate to Developer Portal (`/developer.html`), and register your application.
 2. **Configure Redirect URI:**
-   Add exact callback URLs (e.g., `https://yourapp.com/auth/drexora/callback` or `http://localhost:3000/callback`).
+   Add exact callback URLs targeting your primary domain (e.g., `https://drexorasupport.name.ng/auth/drexora/callback` or `http://localhost:3000/callback`) to ensure local session cookies are set on the custom domain, avoiding cross-domain cookie isolation and SSO redirect loops.
 3. **Select Allowed Scopes:**
    Select required scopes (`openid`, `profile`, `email`).
 4. **Copy Credentials:**
@@ -23,6 +23,6 @@ This quick-start checklist summarizes the steps for experienced developers integ
 8. **Map Identity:**
    Store permanent `sub` (`drexoraUserId`) in your local user database column (`drexora_sub`).
 9. **Issue Local Application Session:**
-   Establish your own application's HttpOnly session cookie or JWT token.
+   Establish your own application's HttpOnly session cookie or JWT token on your primary domain. Never expose tokens in browser URLs (e.g. `/login?sso_token=...`).
 10. **Implement Token Revocation on Logout:**
     Send POST request to `${DREXORA_ISSUER_URL}/oauth/revoke` with `{ token: access_token }` when the user logs out.
