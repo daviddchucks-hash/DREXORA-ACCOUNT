@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Completing Sign In... — Test App B</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .callback-card {
+      max-width: 480px;
+      margin: 60px auto;
+      padding: 32px;
+      text-align: center;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #0284c7;
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="callback-card">
+    <h2 id="status-title" style="color: #0f172a; margin-bottom: 8px;">Completing Sign In (App B)...</h2>
+    <p id="status-desc" style="color: #64748b; font-size: 0.95rem;">Exchanging authorization code for identity tokens.</p>
+    <div id="spinner" class="spinner"></div>
+    <div id="alert" class="alert" style="display: none; margin-top: 20px; text-align: left;"></div>
+    <p id="back-link" style="display: none; margin-top: 20px;"><a href="app2.html">← Return to Test App B</a></p>
+  </div>
+
+  <script>
+    async function processCallback() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      const state = urlParams.get('state');
+      const error = urlParams.get('error');
+
+      const alertEl = document.getElementById('alert');
+      const spinnerEl = document.getElementById('spinner');
+
+      if (error) {
+        spinnerEl.style.display = 'none';
+        alertEl.textContent = 'Authorization request was rejected: ' + error;
+        alertEl.className = 'alert alert-error';
+        alertEl.style.display = 'block';
+        document.getElementById('back-link').style.display = 'block';
+        return;
+      }
+
+      const codeVerifier = sessionStorage.getItem('oauth_pkce_verifier_b');
+      const redirectUri = window.location.origin + '/test-client/app2_callback.html';
+
+      try {
+        const IdpApiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? ''
+          : 'https://drexora-account.onrender.com';
+
+        const tokenRes = await fetch(`${IdpApiBase}/oauth/token`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            grant_type: 'authorization_code',
+            code,
+            redirect_uri: redirectUri,
+            client_id: 'dx_client_test_app_b',
+            code_verifier: codeVerifier
+          })
+        });
+
+        const tokenData = await tokenRes.json();
+        if (!tokenRes.ok) throw new Error(tokenData.error_description || 'Token exchange failed');
+
+        const userInfoRes = await fetch(`${IdpApiBase}/oauth/userinfo`, {
+          headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+        });
+
+        const userInfo = await userInfoRes.json();
+        if (!userInfoRes.ok) throw new Error('Failed to fetch UserInfo claims');
+
+        sessionStorage.setItem('test_app_b_user', JSON.stringify(userInfo));
+        window.location.href = 'app2.html';
+      } catch (err) {
+        spinnerEl.style.display = 'none';
+        alertEl.textContent = err.message;
+        alertEl.className = 'alert alert-error';
+        alertEl.style.display = 'block';
+        document.getElementById('back-link').style.display = 'block';
+      }
+    }
+
+    processCallback();
+  </script>
+</body>
+</html>

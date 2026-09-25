@@ -88,8 +88,12 @@
       try {
         const redirectUri = window.location.origin + '/test-client/callback.html';
 
+        const IdpApiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+          ? ''
+          : 'https://drexora-account.onrender.com';
+
         // 3. Exchange Authorization Code for Tokens at /oauth/token
-        const tokenRes = await fetch('/oauth/token', {
+        const tokenRes = await fetch(`${IdpApiBase}/oauth/token`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -107,7 +111,7 @@
         }
 
         // 4. Fetch UserInfo profile using Bearer Access Token
-        const userInfoRes = await fetch('/oauth/userinfo', {
+        const userInfoRes = await fetch(`${IdpApiBase}/oauth/userinfo`, {
           headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
         });
 

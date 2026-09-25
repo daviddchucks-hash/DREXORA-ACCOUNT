@@ -181,7 +181,10 @@
     }
 
     function buildAuthorizeUrl(consentAction) {
-      const u = new URL('/oauth/authorize', window.location.origin);
+      const targetBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        ? window.location.origin
+        : (API_BASE_URL || 'https://drexora-account.onrender.com');
+      const u = new URL('/oauth/authorize', targetBase);
       u.searchParams.set('client_id', clientId);
       u.searchParams.set('redirect_uri', redirectUri);
       u.searchParams.set('response_type', 'code');
