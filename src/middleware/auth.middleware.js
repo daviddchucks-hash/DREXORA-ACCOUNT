@@ -24,6 +24,38 @@ const strictAuthLimiter = rateLimit({
 });
 
 /**
+ * Dynamic Cookie Options Helper
+ * Detects whether request is running under HTTPS / Render proxy / Cross-Site
+ */
+function cookieOptions(req) {
+  const isProduction = config.nodeEnv === 'production';
+  const isHttps = req ? (req.secure || req.headers['x-forwarded-proto'] === 'https') : isProduction;
+
+  return {
+    httpOnly: true,
+    secure: isHttps || isProduction,
+    sameSite: (isHttps || isProduction) ? 'none' : 'lax',
+    path: '/',
+    maxAge: config.session.maxAgeDays * 24 * 60 * 60 * 1000
+  };
+}
+
+/**
+ * Cookie Options Helper for clearing cookies
+ */
+function clearCookieOptions(req) {
+  const isProduction = config.nodeEnv === 'production';
+  const isHttps = req ? (req.secure || req.headers['x-forwarded-proto'] === 'https') : isProduction;
+
+  return {
+    httpOnly: true,
+    secure: isHttps || isProduction,
+    sameSite: (isHttps || isProduction) ? 'none' : 'lax',
+    path: '/'
+  };
+}
+
+/**
  * Authentication Middleware
  * Validates session cookie or Bearer token and attaches user & session to req
  */
@@ -37,7 +69,7 @@ async function authenticate(req, res, next) {
 
     const session = await sessionService.getValidSession(rawSessionId);
     if (!session) {
-      res.clearCookie(config.session.cookieName, cookieOptions());
+      res.clearCookie(config.session.cookieName, clearCookieOptions(req));
       return res.status(401).json({ error: 'Session expired or invalidated. Please log in again.' });
     }
 
@@ -65,23 +97,10 @@ async function authenticate(req, res, next) {
   }
 }
 
-/**
- * Cookie options helper supporting both same-origin (Render) and cross-origin (GitHub Pages)
- */
-function cookieOptions() {
-  const isProduction = config.nodeEnv === 'production';
-  return {
-    httpOnly: true,
-    secure: isProduction,
-    sameSite: isProduction ? 'none' : 'lax',
-    path: '/'
-  };
-}
-
 function parseBearerToken(req) {
   const authHeader = req.headers['authorization'];
   if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.split(' ')[1];
+    return authHeader.split(' ')[1].trim();
   }
   return null;
 }
@@ -90,5 +109,6 @@ module.exports = {
   globalRateLimiter,
   strictAuthLimiter,
   authenticate,
-  cookieOptions
+  cookieOptions,
+  clearCookieOptions
 };

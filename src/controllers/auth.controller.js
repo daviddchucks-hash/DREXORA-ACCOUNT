@@ -2,7 +2,7 @@ const authService = require('../services/auth.service');
 const sessionService = require('../services/session.service');
 const userService = require('../services/user.service');
 const config = require('../config');
-const { cookieOptions } = require('../middleware/auth.middleware');
+const { cookieOptions, clearCookieOptions } = require('../middleware/auth.middleware');
 
 class AuthController {
   async register(req, res, next) {
@@ -39,12 +39,14 @@ class AuthController {
       const { rawSessionId, user, session } = await authService.login(req.body, req);
 
       // Set HttpOnly, Secure cookie
-      res.cookie(config.session.cookieName, rawSessionId, cookieOptions());
+      res.cookie(config.session.cookieName, rawSessionId, cookieOptions(req));
 
+      // Return user profile, session details, and Bearer token for cross-site fallback
       res.json({
         message: 'Login successful',
         user,
-        sessionId: session.sessionId
+        sessionId: session.sessionId,
+        token: rawSessionId
       });
     } catch (error) {
       next(error);
@@ -67,7 +69,7 @@ class AuthController {
       if (req.rawSessionId) {
         await sessionService.revokeSession(req.user.drexoraUserId, req.session.sessionId);
       }
-      res.clearCookie(config.session.cookieName, cookieOptions());
+      res.clearCookie(config.session.cookieName, clearCookieOptions(req));
       res.json({ message: 'Logged out successfully' });
     } catch (error) {
       next(error);
@@ -77,7 +79,7 @@ class AuthController {
   async logoutAll(req, res, next) {
     try {
       await sessionService.revokeAllUserSessions(req.user.drexoraUserId);
-      res.clearCookie(config.session.cookieName, cookieOptions());
+      res.clearCookie(config.session.cookieName, clearCookieOptions(req));
       res.json({ message: 'Logged out from all devices successfully' });
     } catch (error) {
       next(error);
