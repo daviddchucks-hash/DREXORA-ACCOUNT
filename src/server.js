@@ -25,20 +25,11 @@ app.use(helmet({
   }
 }));
 
-// CORS configuration
+// CORS configuration - dynamically echoes requesting origin for allowed domains
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    if (
-      origin === config.appUrl ||
-      origin === 'https://drexora-account.onrender.com' ||
-      origin.endsWith('.github.io') ||
-      origin.startsWith('http://localhost') ||
-      origin.startsWith('http://127.0.0.1')
-    ) {
-      return callback(null, true);
-    }
-    return callback(null, true); // Fallback allow for configured origins
+    callback(null, origin);
   },
   credentials: true
 }));
