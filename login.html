@@ -38,7 +38,16 @@
 
   <script src="js/app.js"></script>
   <script>
-    redirectIfAuthenticated();
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnTo = urlParams.get('return_to');
+
+    if (returnTo) {
+      API.get('/auth/me').then(() => {
+        window.location.href = returnTo;
+      }).catch(() => {});
+    } else {
+      redirectIfAuthenticated();
+    }
 
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -53,7 +62,7 @@
         if (res.token) {
           sessionStorage.setItem('drexora_token', res.token);
         }
-        window.location.href = 'account.html';
+        window.location.href = returnTo || 'account.html';
       } catch (err) {
         setLoading('submit-btn', false);
         showAlert('alert', err.message);

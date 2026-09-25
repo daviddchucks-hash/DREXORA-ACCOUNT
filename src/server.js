@@ -8,6 +8,12 @@ const { globalRateLimiter } = require('./middleware/auth.middleware');
 
 const authRoutes = require('./routes/auth.routes');
 const accountRoutes = require('./routes/account.routes');
+const oauthRoutes = require('./routes/oauth.routes');
+const oauthController = require('./controllers/oauth.controller');
+const oauthService = require('./services/oauth.service');
+
+// Seed test client application for dev/testing
+oauthService.seedTestClient().catch(() => {});
 
 const app = express();
 
@@ -19,7 +25,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrcAttr: ["'unsafe-inline'"],
       imgSrc: ["'self'", "data:"]
     }
   }
@@ -68,9 +75,12 @@ app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API Routes
+// API & OAuth Routes
+app.use('/oauth', oauthRoutes);
+app.use('/api/oauth', oauthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/account', accountRoutes);
+app.post('/api/admin/clients', oauthController.registerClient);
 
 // Centralized Error Handling Middleware
 app.use((err, req, res, next) => {

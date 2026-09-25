@@ -14,7 +14,11 @@ class MemoryDB {
       userSessions: {},
       verificationTokens: {},
       passwordResetTokens: {},
-      emailChangeTokens: {}
+      emailChangeTokens: {},
+      oauthClients: {},
+      oauthAuthorizationCodes: {},
+      oauthTokens: {},
+      oauthConsents: {}
     };
   }
 

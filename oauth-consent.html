@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Authorize Application — Drexora Account</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .consent-card {
+      max-width: 480px;
+      margin: 40px auto;
+      padding: 32px;
+    }
+    .app-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 0.8rem;
+      border-radius: 12px;
+      background: #eef2ff;
+      color: #4f46e5;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .app-badge.external {
+      background: #fff7ed;
+      color: #c2410c;
+    }
+    .user-pill {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin: 16px 0 24px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .user-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #3b82f6;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .permissions-list {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0;
+    }
+    .permissions-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .permissions-list li:last-child {
+      border-bottom: none;
+    }
+    .check-icon {
+      color: #10b981;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .actions-row {
+      display: flex;
+      gap: 12px;
+      margin-top: 24px;
+    }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card consent-card">
+      <div class="brand-header">
+        <a href="index.html" class="brand-title">Drexora Account</a>
+      </div>
+
+      <div id="loading-state">
+        <p style="text-align: center; color: #64748b; margin: 30px 0;">Loading application permissions...</p>
+      </div>
+
+      <div id="consent-content" style="display: none;">
+        <span id="app-badge" class="app-badge">Application</span>
+        <h1 id="app-title" class="page-title">Continue to App</h1>
+        <p id="app-desc" class="page-subtitle">This application wants permission to access your Drexora Account.</p>
+
+        <div class="user-pill">
+          <div id="user-avatar" class="user-avatar">D</div>
+          <div>
+            <div id="user-name" style="font-weight: 600; color: #0f172a;">User Name</div>
+            <div id="user-email" style="font-size: 0.85rem; color: #64748b;">user@example.com</div>
+          </div>
+        </div>
+
+        <p style="font-weight: 600; font-size: 0.95rem; color: #334155;">Requested Permissions:</p>
+        <ul id="permissions-list" class="permissions-list">
+          <!-- Dynamically populated -->
+        </ul>
+
+        <div id="alert" class="alert"></div>
+
+        <div class="actions-row">
+          <button id="deny-btn" class="btn btn-secondary" style="flex: 1;">Cancel</button>
+          <button id="allow-btn" class="btn" style="flex: 1;">Continue</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const clientId = urlParams.get('client_id');
+    const redirectUri = urlParams.get('redirect_uri');
+    const scope = urlParams.get('scope') || 'openid profile email';
+    const state = urlParams.get('state') || '';
+    const codeChallenge = urlParams.get('code_challenge') || '';
+    const codeChallengeMethod = urlParams.get('code_challenge_method') || 'S256';
+
+    async function loadConsent() {
+      if (!clientId) {
+        document.getElementById('loading-state').innerHTML = '<p style="color: #ef4444; text-align: center;">Error: Missing client_id parameter.</p>';
+        return;
+      }
+
+      try {
+        const data = await API.get(`/oauth/consent-info?client_id=${encodeURIComponent(clientId)}&scope=${encodeURIComponent(scope)}`);
+
+        document.getElementById('loading-state').style.display = 'none';
+        document.getElementById('consent-content').style.display = 'block';
+
+        const client = data.client;
+        const user = data.user;
+
+        document.getElementById('app-title').textContent = `Continue to ${client.name}?`;
+        document.getElementById('app-desc').textContent = client.description || `${client.name} is requesting access to your Drexora user profile.`;
+
+        const badge = document.getElementById('app-badge');
+        if (client.appType === 'drexora_product') {
+          badge.textContent = 'Drexora Product';
+          badge.className = 'app-badge';
+        } else {
+          badge.textContent = 'External Application';
+          badge.className = 'app-badge external';
+        }
+
+        document.getElementById('user-name').textContent = user.fullName;
+        document.getElementById('user-email').textContent = user.email;
+        document.getElementById('user-avatar').textContent = user.fullName.charAt(0).toUpperCase();
+
+        const list = document.getElementById('permissions-list');
+        list.innerHTML = '';
+
+        // Permanent user ID permission is always included
+        const idLi = document.createElement('li');
+        idLi.innerHTML = `<span class="check-icon">✓</span> <div><strong>Your Drexora User ID</strong><div style="font-size: 0.85rem; color: #64748b;">Immutable identity identifier (${user.drexoraUserId})</div></div>`;
+        list.appendChild(idLi);
+
+        data.scopes.forEach(s => {
+          if (s.key === 'openid') return; // already displayed as Drexora User ID
+          const li = document.createElement('li');
+          li.innerHTML = `<span class="check-icon">✓</span> <div><strong>${s.key}</strong><div style="font-size: 0.85rem; color: #64748b;">${s.description}</div></div>`;
+          list.appendChild(li);
+        });
+
+      } catch (err) {
+        document.getElementById('loading-state').innerHTML = `<p style="color: #ef4444; text-align: center;">Error: ${err.message}</p>`;
+      }
+    }
+
+    function buildAuthorizeUrl(consentAction) {
+      const u = new URL('/oauth/authorize', window.location.origin);
+      u.searchParams.set('client_id', clientId);
+      u.searchParams.set('redirect_uri', redirectUri);
+      u.searchParams.set('response_type', 'code');
+      u.searchParams.set('scope', scope);
+      if (state) u.searchParams.set('state', state);
+      if (codeChallenge) u.searchParams.set('code_challenge', codeChallenge);
+      if (codeChallengeMethod) u.searchParams.set('code_challenge_method', codeChallengeMethod);
+      u.searchParams.set('consent', consentAction);
+      return u.toString();
+    }
+
+    document.getElementById('allow-btn').addEventListener('click', () => {
+      window.location.href = buildAuthorizeUrl('approved');
+    });
+
+    document.getElementById('deny-btn').addEventListener('click', () => {
+      window.location.href = buildAuthorizeUrl('denied');
+    });
+
+    loadConsent();
+  </script>
+</body>
+</html>
