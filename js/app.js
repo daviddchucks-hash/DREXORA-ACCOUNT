@@ -3,20 +3,26 @@
  */
 
 // Centralized API Base URL
-// When running locally on localhost, use relative '/api' endpoint.
-// When hosted on GitHub Pages or external domain, point to Render production backend.
 const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? ''
   : 'https://drexora-account.onrender.com';
 
 const API = {
   async req(endpoint, options = {}) {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    };
+
+    // Attach Bearer token from sessionStorage if present (Dual-Method Auth for Cross-Site Browsers)
+    const storedToken = sessionStorage.getItem('drexora_token');
+    if (storedToken && !headers['Authorization']) {
+      headers['Authorization'] = `Bearer ${storedToken}`;
+    }
+
     const config = {
-      credentials: 'include', // Ensures cross-origin session cookies are sent
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers
-      },
+      credentials: 'include', // Sends HttpOnly cross-origin cookie if browser permits
+      headers,
       ...options
     };
 
@@ -28,6 +34,10 @@ const API = {
       const res = await fetch(`${API_BASE_URL}/api${endpoint}`, config);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
+        // If unauthenticated error (401), clear invalid token
+        if (res.status === 401) {
+          sessionStorage.removeItem('drexora_token');
+        }
         throw new Error(data.error || 'An error occurred. Please try again.');
       }
       return data;
@@ -86,6 +96,7 @@ async function requireAuth() {
     const data = await API.get('/auth/me');
     return data.user;
   } catch (err) {
+    sessionStorage.removeItem('drexora_token');
     window.location.href = 'login.html';
     return null;
   }
@@ -108,6 +119,7 @@ async function handleLogout() {
   } catch (e) {
     // Ignore error
   }
+  sessionStorage.removeItem('drexora_token');
   window.location.href = 'login.html';
 }
 
@@ -119,5 +131,6 @@ async function handleLogoutAll() {
   } catch (e) {
     // Ignore error
   }
+  sessionStorage.removeItem('drexora_token');
   window.location.href = 'login.html';
 }
