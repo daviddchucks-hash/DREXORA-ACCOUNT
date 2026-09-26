@@ -5,7 +5,7 @@
 // Centralized API Base URL
 const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? ''
-  : 'https://drexora-account.onrender.com';
+  : 'https://api.drexxora.name.ng';
 
 const API = {
   async req(endpoint, options = {}) {

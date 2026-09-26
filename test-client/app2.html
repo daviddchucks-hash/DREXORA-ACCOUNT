@@ -160,7 +160,7 @@
 
         const IdpBaseUrl = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
           ? window.location.origin
-          : 'https://drexora-account.onrender.com';
+          : 'https://api.drexxora.name.ng';
 
         const authUrl = new URL('/oauth/authorize', IdpBaseUrl);
         authUrl.searchParams.set('client_id', clientId);

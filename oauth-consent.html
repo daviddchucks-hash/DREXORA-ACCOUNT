@@ -183,7 +183,7 @@
     function buildAuthorizeUrl(consentAction) {
       const targetBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
         ? window.location.origin
-        : (API_BASE_URL || 'https://drexora-account.onrender.com');
+        : (API_BASE_URL || 'https://api.drexxora.name.ng');
       const u = new URL('/oauth/authorize', targetBase);
       u.searchParams.set('client_id', clientId);
       u.searchParams.set('redirect_uri', redirectUri);

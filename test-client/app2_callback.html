@@ -64,7 +64,7 @@
       try {
         const IdpApiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
           ? ''
-          : 'https://drexora-account.onrender.com';
+          : 'https://api.drexxora.name.ng';
 
         const tokenRes = await fetch(`${IdpApiBase}/oauth/token`, {
           method: 'POST',

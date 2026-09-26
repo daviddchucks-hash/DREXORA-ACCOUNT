@@ -81,12 +81,13 @@ class OAuthService {
           redirectUris: [
             'http://localhost:3000/test-client/callback.html',
             'http://127.0.0.1:3000/test-client/callback.html',
-            'https://drexora-account.onrender.com/test-client/callback.html'
+            'https://auth.drexxora.name.ng/test-client/callback.html'
           ],
           allowedOrigins: [
             'http://localhost:3000',
             'http://127.0.0.1:3000',
-            'https://drexora-account.onrender.com'
+            'https://auth.drexxora.name.ng',
+            'https://api.drexxora.name.ng'
           ],
           allowedScopes: ['openid', 'profile', 'email'],
           status: 'active'

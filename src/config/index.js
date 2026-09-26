@@ -3,8 +3,8 @@ require('dotenv').config();
 module.exports = {
   port: process.env.PORT || 3000,
   nodeEnv: process.env.NODE_ENV || 'development',
-  appUrl: process.env.APP_URL || 'https://drexora-account.onrender.com',
-  frontendUrl: process.env.FRONTEND_URL || process.env.APP_URL || 'https://drexora-account.onrender.com',
+  appUrl: process.env.APP_URL || 'https://api.drexxora.name.ng',
+  frontendUrl: process.env.FRONTEND_URL || 'https://auth.drexxora.name.ng',
   session: {
     secret: process.env.SESSION_SECRET || 'drexora_default_dev_session_secret_change_me',
     maxAgeDays: parseInt(process.env.SESSION_MAX_AGE_DAYS || '14', 10),

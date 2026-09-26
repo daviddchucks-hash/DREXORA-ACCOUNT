@@ -60,7 +60,7 @@ Redirects the user to Drexora Account for authentication and consent.
 
 ```http
 GET /oauth/authorize?client_id=dx_client_test_app&redirect_uri=https%3A%2F%2Fexample.com%2Fcallback&response_type=code&scope=openid%20profile%20email&state=xyz123&code_challenge=E9Mel-2ugpFuUYWGf6upFmS4bPPGP8n9AXwB1A36XY8&code_challenge_method=S256 HTTP/1.1
-Host: drexora-account.onrender.com
+Host: api.drexxora.name.ng
 ```
 
 #### Successful Redirect Callback
@@ -101,7 +101,7 @@ Content-Type: application/json
 
 ```json
 POST /oauth/token HTTP/1.1
-Host: drexora-account.onrender.com
+Host: api.drexxora.name.ng
 Content-Type: application/json
 
 {
@@ -167,7 +167,7 @@ Revokes an active access token so it can no longer be used.
 
 ```json
 POST /oauth/revoke HTTP/1.1
-Host: drexora-account.onrender.com
+Host: api.drexxora.name.ng
 Content-Type: application/json
 
 {

@@ -6,9 +6,9 @@ This document provides complete protocol and API endpoint specifications for **D
 
 ## 📡 Base URLs & Discovery
 
-* **Production IdP Issuer:** `https://drexora-account.onrender.com`
-* **OIDC Discovery Document:** `GET https://drexora-account.onrender.com/.well-known/openid-configuration`
-* **JWKS URI:** `GET https://drexora-account.onrender.com/.well-known/jwks.json`
+* **Production IdP Issuer:** `https://api.drexxora.name.ng`
+* **OIDC Discovery Document:** `GET https://api.drexxora.name.ng/.well-known/openid-configuration`
+* **JWKS URI:** `GET https://api.drexxora.name.ng/.well-known/jwks.json`
 
 ---
 
@@ -20,12 +20,12 @@ This document provides complete protocol and API endpoint specifications for **D
 #### Response:
 ```json
 {
-  "issuer": "https://drexora-account.onrender.com",
-  "authorization_endpoint": "https://drexora-account.onrender.com/oauth/authorize",
-  "token_endpoint": "https://drexora-account.onrender.com/oauth/token",
-  "userinfo_endpoint": "https://drexora-account.onrender.com/oauth/userinfo",
-  "revocation_endpoint": "https://drexora-account.onrender.com/oauth/revoke",
-  "jwks_uri": "https://drexora-account.onrender.com/.well-known/jwks.json",
+  "issuer": "https://api.drexxora.name.ng",
+  "authorization_endpoint": "https://api.drexxora.name.ng/oauth/authorize",
+  "token_endpoint": "https://api.drexxora.name.ng/oauth/token",
+  "userinfo_endpoint": "https://api.drexxora.name.ng/oauth/userinfo",
+  "revocation_endpoint": "https://api.drexxora.name.ng/oauth/revoke",
+  "jwks_uri": "https://api.drexxora.name.ng/.well-known/jwks.json",
   "response_types_supported": ["code"],
   "subject_types_supported": ["public"],
   "id_token_signing_alg_values_supported": ["HS256"],
