@@ -90,7 +90,7 @@
 
         const IdpApiBase = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
           ? ''
-          : 'https://drexora-account.onrender.com';
+          : 'https://api.drexxora.name.ng';
 
         // 3. Exchange Authorization Code for Tokens at /oauth/token
         const tokenRes = await fetch(`${IdpApiBase}/oauth/token`, {

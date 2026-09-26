@@ -38,7 +38,8 @@ app.use(helmet({
 const allowedExactOrigins = [
   config.appUrl,
   config.frontendUrl,
-  'https://drexora-account.onrender.com',
+  'https://auth.drexxora.name.ng',
+  'https://api.drexxora.name.ng',
   'http://localhost:3000',
   'http://127.0.0.1:3000'
 ].filter(Boolean);

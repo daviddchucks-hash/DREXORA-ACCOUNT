@@ -29,7 +29,7 @@ User
 Your Application ("Continue with Drexora")
   │
   ▼
-Drexora Account IdP (https://drexora-account.onrender.com)
+Drexora Account IdP (https://api.drexxora.name.ng)
   │
   ├── 1. Authentication (Login / Consent)
   ├── 2. Authorization Code Issued
@@ -51,13 +51,13 @@ Your application retains complete control over its database, business logic, sub
 ## 2. What I Need Before Integrating
 
 ### Information Obtained from Drexora Account
-* **Issuer URL:** `https://drexora-account.onrender.com` (or `http://localhost:3000` during local development)
-* **OIDC Discovery URL:** `https://drexora-account.onrender.com/.well-known/openid-configuration`
-* **Authorization Endpoint:** `https://drexora-account.onrender.com/oauth/authorize`
-* **Token Endpoint:** `https://drexora-account.onrender.com/oauth/token`
-* **UserInfo Endpoint:** `https://drexora-account.onrender.com/oauth/userinfo`
-* **Revocation Endpoint:** `https://drexora-account.onrender.com/oauth/revoke`
-* **JWKS URL:** `https://drexora-account.onrender.com/.well-known/jwks.json`
+* **Issuer URL:** `https://api.drexxora.name.ng` (or `http://localhost:3000` during local development)
+* **OIDC Discovery URL:** `https://api.drexxora.name.ng/.well-known/openid-configuration`
+* **Authorization Endpoint:** `https://api.drexxora.name.ng/oauth/authorize`
+* **Token Endpoint:** `https://api.drexxora.name.ng/oauth/token`
+* **UserInfo Endpoint:** `https://api.drexxora.name.ng/oauth/userinfo`
+* **Revocation Endpoint:** `https://api.drexxora.name.ng/oauth/revoke`
+* **JWKS URL:** `https://api.drexxora.name.ng/.well-known/jwks.json`
 * **Client ID (`client_id`):** Generated upon application registration (e.g., `dx_client_a1b2c3d4e5f6`).
 * **Client Secret (`client_secret`):** Generated for confidential backend applications (shown once upon creation/rotation).
 * **Allowed Scopes:** Permitted scopes assigned during registration (`openid`, `profile`, `email`).
@@ -155,7 +155,7 @@ Add a button on your login/registration UI:
     sessionStorage.setItem('drexora_oauth_state', state);
 
     // 3. Build authorization URL targeting Drexora IdP
-    const idpBaseUrl = 'https://drexora-account.onrender.com';
+    const idpBaseUrl = 'https://api.drexxora.name.ng';
     const authUrl = new URL('/oauth/authorize', idpBaseUrl);
     authUrl.searchParams.set('client_id', 'YOUR_CLIENT_ID');
     authUrl.searchParams.set('redirect_uri', 'https://yourapp.com/auth/drexora/callback');
@@ -180,7 +180,7 @@ On your callback route (`/auth/drexora/callback`):
 1. **Verify `state`:** Confirm `query.state` matches `sessionStorage.getItem('drexora_oauth_state')`.
 2. **Retrieve `code_verifier`:** Extract `sessionStorage.getItem('drexora_pkce_verifier')`.
 3. **Execute Token Exchange on Backend:**
-   Send `POST https://drexora-account.onrender.com/oauth/token`:
+   Send `POST https://api.drexxora.name.ng/oauth/token`:
    ```json
    {
      "grant_type": "authorization_code",
@@ -192,7 +192,7 @@ On your callback route (`/auth/drexora/callback`):
    }
    ```
 4. **Fetch UserInfo Claims:**
-   Send `GET https://drexora-account.onrender.com/oauth/userinfo` with `Authorization: Bearer <access_token>`.
+   Send `GET https://api.drexxora.name.ng/oauth/userinfo` with `Authorization: Bearer <access_token>`.
 5. **Extract Immutable User ID:** Extract claim `sub` (e.g. `dx_8f72abc123`).
 6. **Create Local Application Session:** Link `sub` to your local database user and issue an HttpOnly, Secure session cookie.
 
@@ -248,7 +248,7 @@ Configure these variables in your application's `.env` file:
 
 ```env
 # Drexora IdP Configuration
-DREXORA_ISSUER_URL=https://drexora-account.onrender.com
+DREXORA_ISSUER_URL=https://api.drexxora.name.ng
 DREXORA_CLIENT_ID=dx_client_YOUR_APP_ID
 DREXORA_CLIENT_SECRET=dx_secret_YOUR_APP_SECRET
 DREXORA_REDIRECT_URI=https://yourapp.com/auth/drexora/callback
@@ -266,7 +266,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const app = express();
 
-const DREXORA_BASE_URL = process.env.DREXORA_ISSUER_URL || 'https://drexora-account.onrender.com';
+const DREXORA_BASE_URL = process.env.DREXORA_ISSUER_URL || 'https://api.drexxora.name.ng';
 const CLIENT_ID = process.env.DREXORA_CLIENT_ID;
 const CLIENT_SECRET = process.env.DREXORA_CLIENT_SECRET;
 const REDIRECT_URI = process.env.DREXORA_REDIRECT_URI;
@@ -362,7 +362,7 @@ If the backend API and frontend SPA must remain on strictly different origins:
 To revoke an access token when a user logs out:
 
 ```http
-POST https://drexora-account.onrender.com/oauth/revoke
+POST https://api.drexxora.name.ng/oauth/revoke
 Content-Type: application/json
 
 {

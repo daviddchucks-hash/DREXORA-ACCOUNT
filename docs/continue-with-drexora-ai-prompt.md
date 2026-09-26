@@ -10,7 +10,7 @@ You are an expert software engineer task with integrating "Continue with Drexora
 
 ### INTEGRATION CREDENTIALS & CONFIGURATION
 DREXORA ISSUER URL:
-[PASTE DREXORA ISSUER URL HERE, e.g. https://drexora-account.onrender.com]
+[PASTE DREXORA ISSUER URL HERE, e.g. https://api.drexxora.name.ng]
 
 CLIENT ID:
 [PASTE YOUR CLIENT ID HERE, e.g. dx_client_a1b2c3d4e5f6]
@@ -25,7 +25,7 @@ ALLOWED SCOPES:
 [PASTE REQUESTED SCOPES HERE, e.g. openid profile email]
 
 DISCOVERY URL:
-[PASTE DISCOVERY URL, e.g. https://drexora-account.onrender.com/.well-known/openid-configuration]
+[PASTE DISCOVERY URL, e.g. https://api.drexxora.name.ng/.well-known/openid-configuration]
 
 ---
 
