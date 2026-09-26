@@ -68,8 +68,63 @@ app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser(config.session.secret));
 
-// Serve static frontend files from repository root AND provide /public alias compatibility
+const fs = require('fs');
 const rootPath = path.join(__dirname, '..');
+
+// Clean URLs Redirect Middleware: Redirect requests ending with .html to clean URLs
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return next();
+  }
+
+  if (req.path.endsWith('.html')) {
+    let cleanPath = req.path.slice(0, -5);
+    if (cleanPath.endsWith('/index')) {
+      cleanPath = cleanPath.slice(0, -6) || '/';
+    }
+
+    const targetFile = path.join(rootPath, req.path);
+    if (fs.existsSync(targetFile) && fs.statSync(targetFile).isFile()) {
+      const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
+      return res.redirect(301, cleanPath + query);
+    }
+  }
+
+  next();
+});
+
+// Clean URLs Resolution Middleware: Serve .html files for extensionless routes
+app.use((req, res, next) => {
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    return next();
+  }
+
+  if (
+    req.path.startsWith('/api/') ||
+    req.path.startsWith('/oauth') ||
+    req.path.startsWith('/.well-known/') ||
+    req.path === '/health'
+  ) {
+    return next();
+  }
+
+  const htmlFilePath = path.join(rootPath, `${req.path}.html`);
+  if (fs.existsSync(htmlFilePath) && fs.statSync(htmlFilePath).isFile()) {
+    return res.sendFile(htmlFilePath);
+  }
+
+  if (req.path.startsWith('/public/')) {
+    const subPath = req.path.slice(7);
+    const publicHtmlPath = path.join(rootPath, `${subPath}.html`);
+    if (fs.existsSync(publicHtmlPath) && fs.statSync(publicHtmlPath).isFile()) {
+      return res.sendFile(publicHtmlPath);
+    }
+  }
+
+  next();
+});
+
+// Serve static frontend files from repository root AND provide /public alias compatibility
 app.use(express.static(rootPath));
 app.use('/public', express.static(rootPath));
 

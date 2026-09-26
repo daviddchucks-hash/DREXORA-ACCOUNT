@@ -284,4 +284,32 @@ test('Drexora Account Comprehensive Test Suite', async (t) => {
       .set('Cookie', sessionCookie);
     assert.equal(checkRes.status, 401);
   });
+
+  await t.test('11. Clean Extensionless URLs Routing', async () => {
+    // Direct extensionless route requests serve HTML files with 200
+    const res1 = await request().get('/login');
+    assert.equal(res1.status, 200);
+    assert.ok(res1.text.includes('Sign In'));
+
+    const res2 = await request().get('/account');
+    assert.equal(res2.status, 200);
+    assert.ok(res2.text.includes('Account Profile'));
+
+    const res3 = await request().get('/security');
+    assert.equal(res3.status, 200);
+    assert.ok(res3.text.includes('Security Settings'));
+
+    // Requests ending in .html redirect (301) to clean URL, preserving query parameters
+    const res4 = await request().get('/login.html?return_to=%2Faccount');
+    assert.equal(res4.status, 301);
+    assert.equal(res4.headers.location, '/login?return_to=%2Faccount');
+
+    const res5 = await request().get('/forgot-password.html');
+    assert.equal(res5.status, 301);
+    assert.equal(res5.headers.location, '/forgot-password');
+
+    const res6 = await request().get('/index.html');
+    assert.equal(res6.status, 301);
+    assert.equal(res6.headers.location, '/');
+  });
 });

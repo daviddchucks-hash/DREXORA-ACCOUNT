@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Not Found — Drexora Account</title>
+  <script>
+    (function() {
+      const path = window.location.pathname;
+      const search = window.location.search;
+      const hash = window.location.hash;
+
+      // Handle redirect if someone accesses .html URL directly
+      if (path.endsWith('.html')) {
+        let cleanPath = path.slice(0, -5);
+        if (cleanPath.endsWith('/index')) {
+          cleanPath = cleanPath.slice(0, -6) || '/';
+        }
+        window.location.replace(cleanPath + search + hash);
+        return;
+      }
+
+      // Handle clean extensionless route resolution on static hosting (e.g. GitHub Pages)
+      const normalizedPath = path.endsWith('/') ? path.slice(0, -1) : path;
+      if (normalizedPath) {
+        fetch(normalizedPath + '.html' + search)
+          .then(res => {
+            if (res.ok) return res.text();
+            throw new Error('Not found');
+          })
+          .then(html => {
+            document.open();
+            document.write(html);
+            document.close();
+            window.history.replaceState(null, '', normalizedPath + search + hash);
+          })
+          .catch(() => {});
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="auth-wrapper">
+    <div class="auth-card" style="text-align: center;">
+      <div class="brand-header">
+        <a href="/" class="brand-title">Drexora Account</a>
+      </div>
+      <h1 class="page-title">404 — Page Not Found</h1>
+      <p class="page-subtitle">The page you requested could not be found.</p>
+      <div style="margin-top: 24px;">
+        <a href="/" class="btn">Return Home</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
