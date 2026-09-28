@@ -10,7 +10,7 @@
   <div class="auth-wrapper">
     <div class="auth-card">
       <div class="brand-header">
-        <a href="index.html" class="brand-title">Drexora Account</a>
+        <a href="/" class="brand-title">Drexora Account</a>
       </div>
       <h1 class="page-title">Create Account</h1>
       <p class="page-subtitle">Set up your single Drexora account.</p>
@@ -38,7 +38,7 @@
       </form>
 
       <div class="auth-footer">
-        <p>Already have an account? <a href="login.html">Sign in</a></p>
+        <p>Already have an account? <a href="login">Sign in</a></p>
       </div>
     </div>
   </div>
@@ -68,7 +68,7 @@
         // Store unverified email for verification page
         sessionStorage.setItem('pendingVerificationEmail', email);
         // Navigate immediately to verification page
-        window.location.href = `verify-email.html?email=${encodeURIComponent(email)}`;
+        window.location.href = `verify-email?email=${encodeURIComponent(email)}`;
       } catch (err) {
         showAlert('alert', err.message);
         setLoading('submit-btn', false);

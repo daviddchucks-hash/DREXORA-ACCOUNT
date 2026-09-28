@@ -72,17 +72,17 @@ class OAuthController {
         const backendBase = config.appUrl || `${req.protocol}://${req.get('host')}`;
         const relativeOrAbsolute = req.originalUrl || `/oauth/authorize?${new URLSearchParams(req.query).toString()}`;
         const returnUrl = relativeOrAbsolute.startsWith('http') ? relativeOrAbsolute : `${backendBase}${relativeOrAbsolute}`;
-        return res.redirect(`${frontendBase}/login.html?return_to=${encodeURIComponent(returnUrl)}`);
+        return res.redirect(`${frontendBase}/login?return_to=${encodeURIComponent(returnUrl)}`);
       }
 
       // 7. Check User Account Status
       const user = await userService.findByUserId(session.drexoraUserId);
       if (!user) {
-        return res.redirect(`${frontendBase}/login.html?error=account_not_found`);
+        return res.redirect(`${frontendBase}/login?error=account_not_found`);
       }
 
       if (user.accountStatus === 'email_unverified' || !user.emailVerified) {
-        return res.redirect(`${frontendBase}/verify-email.html?notice=email_verification_required`);
+        return res.redirect(`${frontendBase}/verify-email?notice=email_verification_required`);
       }
 
       if (user.accountStatus === 'suspended' || user.accountStatus === 'disabled') {
@@ -131,7 +131,7 @@ class OAuthController {
 
       // Show Consent Screen
       const baseUrl = config.frontendUrl || `${req.protocol}://${req.get('host')}`;
-      const consentPageUrl = new URL('/oauth-consent.html', baseUrl);
+      const consentPageUrl = new URL('/oauth-consent', baseUrl);
       consentPageUrl.searchParams.set('client_id', client.clientId);
       consentPageUrl.searchParams.set('redirect_uri', redirectUri);
       consentPageUrl.searchParams.set('response_type', 'code');

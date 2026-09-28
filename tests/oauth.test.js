@@ -79,7 +79,7 @@ describe('Drexora OAuth 2.0 & OIDC SSO Integration Test Suite', () => {
 
       // Should redirect to consent screen or return callback URL if consented
       assert.equal(res.status, 302);
-      assert.ok(res.headers.location.includes('/oauth-consent.html') || res.headers.location.includes('code='));
+      assert.ok(res.headers.location.includes('/oauth-consent') || res.headers.location.includes('code='));
     });
 
     test('Unregistered / modified / malicious redirect URI must be rejected with 400', async () => {
@@ -361,7 +361,7 @@ describe('Drexora OAuth 2.0 & OIDC SSO Integration Test Suite', () => {
         });
 
       assert.equal(res.status, 302);
-      assert.ok(res.headers.location.includes('/login.html?return_to='));
+      assert.ok(res.headers.location.includes('/login?return_to='));
     });
   });
 

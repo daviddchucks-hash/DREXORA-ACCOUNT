@@ -10,7 +10,7 @@
   <div class="auth-wrapper">
     <div class="auth-card">
       <div class="brand-header">
-        <a href="index.html" class="brand-title">Drexora Account</a>
+        <a href="/" class="brand-title">Drexora Account</a>
       </div>
       <h1 class="page-title">Sign In</h1>
       <p class="page-subtitle">Enter your credentials to access your account.</p>
@@ -30,8 +30,8 @@
       </form>
 
       <div class="auth-footer">
-        <p><a href="forgot-password.html">Forgot password?</a></p>
-        <p style="margin-top: 8px;">Don't have an account? <a href="register.html">Create one</a></p>
+        <p><a href="forgot-password">Forgot password?</a></p>
+        <p style="margin-top: 8px;">Don't have an account? <a href="register">Create one</a></p>
       </div>
     </div>
   </div>
@@ -62,7 +62,7 @@
         if (res.token) {
           sessionStorage.setItem('drexora_token', res.token);
         }
-        window.location.href = returnTo || 'account.html';
+        window.location.href = returnTo || 'account';
       } catch (err) {
         setLoading('submit-btn', false);
         showAlert('alert', err.message);

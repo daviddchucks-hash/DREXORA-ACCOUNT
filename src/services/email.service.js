@@ -40,7 +40,7 @@ class EmailService {
    */
   async sendVerificationEmail(email, code, name) {
     const baseUrl = config.frontendUrl || config.appUrl;
-    const verifyUrl = `${baseUrl}/verify-email.html?code=${code}`;
+    const verifyUrl = `${baseUrl}/verify-email?code=${code}`;
     const subject = `${code} is your Drexora Account verification code`;
     const html = `
       <!DOCTYPE html>
@@ -81,7 +81,7 @@ class EmailService {
    */
   async sendPasswordResetEmail(email, token, name) {
     const baseUrl = config.frontendUrl || config.appUrl;
-    const resetUrl = `${baseUrl}/reset-password.html?token=${token}`;
+    const resetUrl = `${baseUrl}/reset-password?token=${token}`;
     const subject = 'Reset your Drexora Account password';
     const html = `
       <!DOCTYPE html>
@@ -120,7 +120,7 @@ class EmailService {
    */
   async sendEmailChangeVerification(newEmail, code, name) {
     const baseUrl = config.frontendUrl || config.appUrl;
-    const verifyUrl = `${baseUrl}/verify-email.html?action=email_change&code=${code}`;
+    const verifyUrl = `${baseUrl}/verify-email?action=email_change&code=${code}`;
     const subject = `${code} is your code to confirm new Drexora Account email`;
     const html = `
       <!DOCTYPE html>

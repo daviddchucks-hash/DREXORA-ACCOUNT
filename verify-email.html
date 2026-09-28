@@ -10,7 +10,7 @@
   <div class="auth-wrapper">
     <div class="auth-card">
       <div class="brand-header">
-        <a href="index.html" class="brand-title">Drexora Account</a>
+        <a href="/" class="brand-title">Drexora Account</a>
       </div>
       <h1 class="page-title">Email Verification</h1>
       <p class="page-subtitle" id="subtitle-status">Enter the 8-digit verification code sent to your email.</p>
@@ -31,7 +31,7 @@
       </form>
 
       <div id="action-container" style="display: none; margin-top: 20px;">
-        <a href="login.html" class="btn">Proceed to Sign In</a>
+        <a href="login" class="btn">Proceed to Sign In</a>
       </div>
 
       <div id="resend-section" style="margin-top: 24px; border-top: 1px solid var(--border-color); padding-top: 20px;">
@@ -96,7 +96,7 @@
 
         // Redirect to login page after 2 seconds
         setTimeout(() => {
-          window.location.href = 'login.html';
+          window.location.href = 'login';
         }, 2000);
       } catch (err) {
         document.getElementById('subtitle-status').textContent = 'Verification status:';

@@ -2,6 +2,16 @@
  * Drexora Account Client API & Frontend Application Logic
  */
 
+// Clean URLs: Automatically strip .html extension in address bar on static hosts
+if (typeof window !== 'undefined' && window.location && window.location.pathname.endsWith('.html')) {
+  let cleanPath = window.location.pathname.slice(0, -5);
+  if (cleanPath.endsWith('/index')) {
+    cleanPath = cleanPath.slice(0, -6) || '/';
+  }
+  const cleanUrl = cleanPath + window.location.search + window.location.hash;
+  window.history.replaceState(null, '', cleanUrl);
+}
+
 // Centralized API Base URL
 const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? ''
@@ -97,7 +107,7 @@ async function requireAuth() {
     return data.user;
   } catch (err) {
     sessionStorage.removeItem('drexora_token');
-    window.location.href = 'login.html';
+    window.location.href = 'login';
     return null;
   }
 }
@@ -106,7 +116,7 @@ async function requireAuth() {
 async function redirectIfAuthenticated() {
   try {
     await API.get('/auth/me');
-    window.location.href = 'account.html';
+    window.location.href = 'account';
   } catch (err) {
     // User is guest, stay on auth page
   }
@@ -120,7 +130,7 @@ async function handleLogout() {
     // Ignore error
   }
   sessionStorage.removeItem('drexora_token');
-  window.location.href = 'login.html';
+  window.location.href = 'login';
 }
 
 // Logout All Devices Action
@@ -132,5 +142,5 @@ async function handleLogoutAll() {
     // Ignore error
   }
   sessionStorage.removeItem('drexora_token');
-  window.location.href = 'login.html';
+  window.location.href = 'login';
 }
