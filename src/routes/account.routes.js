@@ -9,6 +9,8 @@ router.use(authenticate); // Require valid session for all account endpoints
 
 router.get('/profile', accountController.getProfile);
 router.patch('/profile', accountController.updateProfile);
+router.post('/phone/send-verification', accountController.sendPhoneVerification);
+router.post('/phone/verify', accountController.verifyPhone);
 router.get('/sessions', accountController.getSessions);
 router.delete('/sessions/:id', accountController.revokeSession);
 router.post('/sessions/revoke-others', accountController.revokeOtherSessions);

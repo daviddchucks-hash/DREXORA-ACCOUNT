@@ -2,10 +2,85 @@ const db = require('../db/firebase');
 const auditService = require('./audit.service');
 const emailService = require('./email.service');
 const { generateDrexoraUserId } = require('../utils/id.generator');
-const { normalizeEmail } = require('../utils/validator.util');
+const { normalizeEmail, isValidName, isValidPhone, isValidCountry, isValidDateOfBirth } = require('../utils/validator.util');
 const { verifyPassword } = require('../utils/password.util');
 
 class UserService {
+  /**
+   * Helper to parse full name into first and last name if possible
+   */
+  parseName(fullName = '') {
+    const parts = fullName.trim().split(/\s+/);
+    if (parts.length === 1) {
+      return { firstName: parts[0], lastName: '' };
+    }
+    const firstName = parts[0];
+    const lastName = parts.slice(1).join(' ');
+    return { firstName, lastName };
+  }
+
+  /**
+   * Checks whether all required profile fields are completed.
+   * Required fields: firstName, lastName, phone, country.
+   */
+  isProfileComplete(profile) {
+    if (!profile) return false;
+    const { firstName, lastName, phone, country } = profile;
+    return Boolean(
+      firstName && firstName.trim() &&
+      lastName && lastName.trim() &&
+      phone && phone.trim() &&
+      country && country.trim()
+    );
+  }
+
+  /**
+   * Calculates comprehensive profile status and completion percentage.
+   */
+  getProfileStatus(user) {
+    if (!user) return null;
+    const profile = user.profile || {};
+
+    const requiredFields = [
+      { key: 'firstName', label: 'First Name', value: profile.firstName },
+      { key: 'lastName', label: 'Last Name', value: profile.lastName },
+      { key: 'phone', label: 'Phone Number', value: profile.phone },
+      { key: 'country', label: 'Country', value: profile.country }
+    ];
+
+    const optionalFields = [
+      { key: 'state', label: 'State/Province', value: profile.state },
+      { key: 'city', label: 'City', value: profile.city },
+      { key: 'address', label: 'Address', value: profile.address },
+      { key: 'postalCode', label: 'Postal/ZIP Code', value: profile.postalCode },
+      { key: 'profilePhoto', label: 'Profile Photo', value: profile.profilePhoto },
+      { key: 'dateOfBirth', label: 'Date of Birth', value: profile.dateOfBirth },
+      { key: 'preferredLanguage', label: 'Preferred Language', value: profile.preferredLanguage }
+    ];
+
+    const missingRequired = requiredFields.filter(f => !f.value || !String(f.value).trim()).map(f => f.key);
+    const filledRequiredCount = requiredFields.length - missingRequired.length;
+    const filledOptionalCount = optionalFields.filter(f => f.value && String(f.value).trim()).length;
+
+    // Weighting: 70% for required fields, 30% for optional fields
+    const requiredScore = (filledRequiredCount / requiredFields.length) * 70;
+    const optionalScore = (filledOptionalCount / optionalFields.length) * 30;
+    const completionPercentage = Math.min(100, Math.round(requiredScore + optionalScore));
+
+    const verifiedFields = [];
+    if (user.emailVerified) verifiedFields.push('email');
+    if (user.phoneVerified) verifiedFields.push('phone');
+
+    return {
+      emailVerified: Boolean(user.emailVerified),
+      phoneVerified: Boolean(user.phoneVerified),
+      profileCompleted: Boolean(user.profileCompleted),
+      missingRequiredFields: missingRequired,
+      verifiedFields,
+      completionPercentage,
+      updatedAt: user.metadata ? user.metadata.updatedAt || user.metadata.createdAt : Date.now()
+    };
+  }
   /**
    * Finds a user record by Drexora User ID.
    * @param {string} drexoraUserId
@@ -40,13 +115,26 @@ class UserService {
     const normalized = normalizeEmail(email);
     const drexoraUserId = generateDrexoraUserId();
     const now = Date.now();
+    const { firstName, lastName } = this.parseName(fullName);
 
     const userData = {
       drexoraUserId,
       profile: {
+        firstName,
+        lastName,
+        displayName: fullName.trim(),
         fullName: fullName.trim(),
         email: normalized,
-        pendingEmail: null
+        pendingEmail: null,
+        phone: null,
+        country: null,
+        state: null,
+        city: null,
+        address: null,
+        postalCode: null,
+        profilePhoto: null,
+        dateOfBirth: null,
+        preferredLanguage: null
       },
       security: {
         passwordHash,
@@ -54,9 +142,12 @@ class UserService {
       },
       accountStatus: 'email_unverified', // 'active' | 'email_unverified' | 'suspended' | 'disabled'
       emailVerified: false,
+      phoneVerified: false,
+      profileCompleted: false,
       metadata: {
         createdAt: now,
-        lastLoginAt: null
+        lastLoginAt: null,
+        updatedAt: now
       }
     };
 
@@ -70,21 +161,103 @@ class UserService {
   }
 
   /**
-   * Updates user profile fields (e.g. name).
-   * Ensures sensitive fields like user ID, account status, etc. cannot be modified directly via profile update.
+   * Updates user profile fields with backend validation and sanitization.
+   * Required fields: firstName, lastName, phone, country.
+   * Resets phoneVerified to false if phone number is changed.
    */
-  async updateProfile(drexoraUserId, updates) {
+  async updateProfile(drexoraUserId, updates = {}) {
     const user = await this.findByUserId(drexoraUserId);
-    if (!user) throw new Error('User not found');
+    if (!user) throw { status: 404, message: 'User not found' };
 
-    const allowedUpdates = {};
+    const currentProfile = user.profile || {};
+    const updatedProfile = { ...currentProfile };
+    let phoneChanged = false;
+
+    if (typeof updates.firstName === 'string') {
+      const val = updates.firstName.trim();
+      if (!val) throw { status: 400, message: 'First name is required' };
+      if (!isValidName(val)) throw { status: 400, message: 'First name must be between 2 and 100 characters' };
+      updatedProfile.firstName = val;
+    }
+
+    if (typeof updates.lastName === 'string') {
+      const val = updates.lastName.trim();
+      if (!val) throw { status: 400, message: 'Last name is required' };
+      if (!isValidName(val)) throw { status: 400, message: 'Last name must be between 2 and 100 characters' };
+      updatedProfile.lastName = val;
+    }
+
+    if (typeof updates.displayName === 'string') {
+      updatedProfile.displayName = updates.displayName.trim();
+    }
+
     if (typeof updates.fullName === 'string' && updates.fullName.trim()) {
-      allowedUpdates['profile/fullName'] = updates.fullName.trim();
+      updatedProfile.fullName = updates.fullName.trim();
+    } else if (updatedProfile.firstName || updatedProfile.lastName) {
+      updatedProfile.fullName = `${updatedProfile.firstName || ''} ${updatedProfile.lastName || ''}`.trim();
     }
 
-    if (Object.keys(allowedUpdates).length > 0) {
-      await db.update(`users/${drexoraUserId}`, allowedUpdates);
+    if (!updatedProfile.displayName) {
+      updatedProfile.displayName = updatedProfile.fullName;
     }
+
+    if (typeof updates.phone === 'string') {
+      const val = updates.phone.trim();
+      if (val) {
+        if (!isValidPhone(val)) throw { status: 400, message: 'Invalid phone number format' };
+        if (currentProfile.phone !== val) {
+          updatedProfile.phone = val;
+          phoneChanged = true;
+        }
+      } else {
+        if (currentProfile.phone) {
+          updatedProfile.phone = null;
+          phoneChanged = true;
+        }
+      }
+    }
+
+    if (typeof updates.country === 'string') {
+      const val = updates.country.trim();
+      if (val) {
+        if (!isValidCountry(val)) throw { status: 400, message: 'Invalid country name' };
+        updatedProfile.country = val;
+      } else {
+        updatedProfile.country = null;
+      }
+    }
+
+    if (typeof updates.state === 'string') updatedProfile.state = updates.state.trim() || null;
+    if (typeof updates.city === 'string') updatedProfile.city = updates.city.trim() || null;
+    if (typeof updates.address === 'string') updatedProfile.address = updates.address.trim() || null;
+    if (typeof updates.postalCode === 'string') updatedProfile.postalCode = updates.postalCode.trim() || null;
+    if (typeof updates.profilePhoto === 'string') updatedProfile.profilePhoto = updates.profilePhoto.trim() || null;
+    if (typeof updates.preferredLanguage === 'string') updatedProfile.preferredLanguage = updates.preferredLanguage.trim() || null;
+
+    if (typeof updates.dateOfBirth === 'string') {
+      const val = updates.dateOfBirth.trim();
+      if (val) {
+        if (!isValidDateOfBirth(val)) throw { status: 400, message: 'Invalid date of birth. Must be a past date in YYYY-MM-DD format.' };
+        updatedProfile.dateOfBirth = val;
+      } else {
+        updatedProfile.dateOfBirth = null;
+      }
+    }
+
+    const now = Date.now();
+    const isComplete = this.isProfileComplete(updatedProfile);
+
+    const dbUpdates = {
+      profile: updatedProfile,
+      profileCompleted: isComplete,
+      'metadata/updatedAt': now
+    };
+
+    if (phoneChanged) {
+      dbUpdates.phoneVerified = false;
+    }
+
+    await db.update(`users/${drexoraUserId}`, dbUpdates);
 
     return await this.findByUserId(drexoraUserId);
   }
@@ -100,9 +273,30 @@ class UserService {
    * Marks account email as verified.
    */
   async markEmailVerified(drexoraUserId) {
+    const user = await this.findByUserId(drexoraUserId);
+    const isComplete = this.isProfileComplete(user ? user.profile : null);
+
     await db.update(`users/${drexoraUserId}`, {
       emailVerified: true,
-      accountStatus: 'active'
+      profileCompleted: isComplete,
+      accountStatus: 'active',
+      'metadata/updatedAt': Date.now()
+    });
+  }
+
+  /**
+   * Marks phone number as verified.
+   */
+  async markPhoneVerified(drexoraUserId) {
+    const user = await this.findByUserId(drexoraUserId);
+    if (!user) throw { status: 404, message: 'User not found' };
+
+    const isComplete = this.isProfileComplete(user.profile);
+
+    await db.update(`users/${drexoraUserId}`, {
+      phoneVerified: true,
+      profileCompleted: isComplete,
+      'metadata/updatedAt': Date.now()
     });
   }
 
@@ -229,15 +423,33 @@ class UserService {
    */
   toPublicProfile(user) {
     if (!user) return null;
+    const profile = user.profile || {};
+    const status = this.getProfileStatus(user);
+
     return {
       drexoraUserId: user.drexoraUserId,
-      fullName: user.profile.fullName,
-      email: user.profile.email,
-      pendingEmail: user.profile.pendingEmail || null,
-      emailVerified: user.emailVerified,
+      firstName: profile.firstName || '',
+      lastName: profile.lastName || '',
+      displayName: profile.displayName || profile.fullName || '',
+      fullName: profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+      email: profile.email,
+      pendingEmail: profile.pendingEmail || null,
+      phone: profile.phone || null,
+      country: profile.country || null,
+      state: profile.state || null,
+      city: profile.city || null,
+      address: profile.address || null,
+      postalCode: profile.postalCode || null,
+      profilePhoto: profile.profilePhoto || null,
+      dateOfBirth: profile.dateOfBirth || null,
+      preferredLanguage: profile.preferredLanguage || null,
+      emailVerified: Boolean(user.emailVerified),
+      phoneVerified: Boolean(user.phoneVerified),
+      profileCompleted: Boolean(user.profileCompleted),
       accountStatus: user.accountStatus,
-      createdAt: user.metadata.createdAt,
-      lastLoginAt: user.metadata.lastLoginAt
+      createdAt: user.metadata ? user.metadata.createdAt : null,
+      lastLoginAt: user.metadata ? user.metadata.lastLoginAt : null,
+      profileStatus: status
     };
   }
 }

@@ -3,9 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Account Overview — Drexora Account</title>
+  <title>Complete Your Profile — Drexora Account</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
+    .complete-wrapper {
+      max-width: 680px;
+      margin: 40px auto;
+      padding: 0 20px;
+      width: 100%;
+    }
+    .progress-container {
+      background: #e5e7eb;
+      border-radius: 8px;
+      height: 12px;
+      width: 100%;
+      overflow: hidden;
+      margin: 16px 0 24px 0;
+    }
+    .progress-bar {
+      background: #111827;
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
     .form-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -13,6 +33,9 @@
     }
     .full-width {
       grid-column: span 2;
+    }
+    .field-required {
+      color: #dc2626;
     }
     .badge-verified {
       background: #ecfdf5;
@@ -42,67 +65,53 @@
     <div class="nav-container">
       <a href="account" class="brand-title">Drexora Account</a>
       <div class="nav-links">
-        <a href="account" class="nav-link active">Profile</a>
-        <a href="connected-apps" class="nav-link">Connected Apps</a>
-        <a href="security" class="nav-link">Security</a>
-        <a href="sessions" class="nav-link">Sessions</a>
         <a href="#" onclick="handleLogout(); return false;" class="nav-link" style="color: var(--danger-color);">Sign Out</a>
       </div>
     </div>
   </nav>
 
-  <div class="dashboard-wrapper">
-    <h1 class="page-title">Account Profile</h1>
-    <p class="page-subtitle">View and manage your core identity and profile information.</p>
-
-    <div id="alert" class="alert"></div>
-
+  <div class="complete-wrapper">
     <div class="card-section">
-      <h2 class="section-title">Identity & Profile Overview</h2>
-      <div class="data-grid">
-        <div class="data-label">Drexora ID</div>
-        <div class="data-value" id="val-drexora-id" style="font-family: monospace; font-weight: 600;">Loading...</div>
+      <h1 class="page-title">Complete your Drexora Account</h1>
+      <p class="page-subtitle">Complete your profile so Drexora services can securely identify your account and provide information to applications you authorize.</p>
 
-        <div class="data-label">Account Status</div>
-        <div class="data-value" id="val-status">Loading...</div>
-
-        <div class="data-label">Email Verification</div>
-        <div class="data-value" id="val-email-verified">Loading...</div>
-
-        <div class="data-label">Phone Verification</div>
-        <div class="data-value" id="val-phone-verified">Loading...</div>
-
-        <div class="data-label">Profile Completion</div>
-        <div class="data-value" id="val-profile-complete">Loading...</div>
-
-        <div class="data-label">Member Since</div>
-        <div class="data-value" id="val-created-at">Loading...</div>
+      <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600;">
+        <span>Profile Completion</span>
+        <span id="progress-percent">0%</span>
       </div>
-    </div>
+      <div class="progress-container">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
 
-    <div class="card-section">
-      <h2 class="section-title">Edit Profile Details</h2>
-      <form id="profile-form">
-        <div class="form-grid" style="margin-bottom: 20px;">
+      <div id="alert" class="alert"></div>
+
+      <form id="complete-profile-form">
+        <!-- 1. Personal Information -->
+        <h2 class="section-title">Personal Information</h2>
+        <div class="form-grid" style="margin-bottom: 24px;">
           <div>
-            <label for="firstName">First Name <span style="color: #dc2626;">*</span></label>
-            <input type="text" id="firstName" required>
+            <label for="firstName">First Name <span class="field-required">*</span></label>
+            <input type="text" id="firstName" placeholder="e.g. Jane" required>
           </div>
           <div>
-            <label for="lastName">Last Name <span style="color: #dc2626;">*</span></label>
-            <input type="text" id="lastName" required>
+            <label for="lastName">Last Name <span class="field-required">*</span></label>
+            <input type="text" id="lastName" placeholder="e.g. Doe" required>
           </div>
           <div class="full-width">
-            <label for="displayName">Display Name</label>
-            <input type="text" id="displayName">
+            <label for="displayName">Display Name <span style="font-size: 11px; color: var(--text-muted);">(Optional)</span></label>
+            <input type="text" id="displayName" placeholder="e.g. Jane Doe">
+          </div>
+        </div>
+
+        <!-- 2. Contact Information -->
+        <h2 class="section-title">Contact Information</h2>
+        <div class="form-grid" style="margin-bottom: 24px;">
+          <div class="full-width">
+            <label>Primary Email Address <span class="badge-verified">Verified</span></label>
+            <input type="email" id="email" disabled style="background: #f3f4f6; cursor: not-allowed;">
           </div>
           <div class="full-width">
-            <label>Primary Email Address</label>
-            <input type="email" id="email-display" disabled style="background: #f3f4f6; cursor: not-allowed;">
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">To update your primary email address, visit <a href="security">Security Settings</a>.</p>
-          </div>
-          <div class="full-width">
-            <label for="phone">Phone Number <span style="color: #dc2626;">*</span> <span id="phone-status-badge"></span></label>
+            <label for="phone">Phone Number <span class="field-required">*</span> <span id="phone-status-badge"></span></label>
             <div class="phone-verify-group">
               <input type="text" id="phone" placeholder="e.g. +1234567890" required style="flex: 1;">
               <button type="button" id="send-phone-code-btn" class="btn btn-secondary btn-sm" style="width: auto;">Verify Phone</button>
@@ -115,85 +124,82 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- 3. Location Information -->
+        <h2 class="section-title">Location</h2>
+        <div class="form-grid" style="margin-bottom: 24px;">
           <div>
-            <label for="country">Country <span style="color: #dc2626;">*</span></label>
-            <input type="text" id="country" required>
+            <label for="country">Country <span class="field-required">*</span></label>
+            <input type="text" id="country" placeholder="e.g. United States" required>
           </div>
           <div>
             <label for="state">State / Province</label>
-            <input type="text" id="state">
+            <input type="text" id="state" placeholder="e.g. California">
           </div>
           <div>
             <label for="city">City</label>
-            <input type="text" id="city">
+            <input type="text" id="city" placeholder="e.g. San Francisco">
           </div>
           <div>
             <label for="postalCode">Postal / ZIP Code</label>
-            <input type="text" id="postalCode">
+            <input type="text" id="postalCode" placeholder="e.g. 94105">
           </div>
           <div class="full-width">
             <label for="address">Address</label>
-            <input type="text" id="address">
+            <input type="text" id="address" placeholder="e.g. 123 Market Street, Suite 400">
           </div>
+        </div>
+
+        <!-- 4. Additional Information -->
+        <h2 class="section-title">Additional Details</h2>
+        <div class="form-grid" style="margin-bottom: 32px;">
           <div>
             <label for="dateOfBirth">Date of Birth</label>
             <input type="date" id="dateOfBirth">
           </div>
           <div>
             <label for="preferredLanguage">Preferred Language</label>
-            <input type="text" id="preferredLanguage">
+            <input type="text" id="preferredLanguage" placeholder="e.g. English">
           </div>
           <div class="full-width">
             <label for="profilePhoto">Profile Photo URL</label>
-            <input type="text" id="profilePhoto">
+            <input type="text" id="profilePhoto" placeholder="e.g. https://example.com/avatar.jpg">
           </div>
         </div>
 
-        <button type="submit" id="save-btn" class="btn btn-sm">Save Profile Changes</button>
+        <button type="submit" id="save-btn" class="btn" style="font-weight: 600;">Save Profile & Continue</button>
       </form>
     </div>
   </div>
 
   <script src="js/app.js"></script>
   <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const returnTo = urlParams.get('return_to');
+
+    let currentUser = null;
+
     async function loadProfile() {
-      const user = await requireAuth();
-      if (!user) return;
+      currentUser = await requireAuth();
+      if (!currentUser) return;
 
-      document.getElementById('val-drexora-id').textContent = user.drexoraUserId;
-      document.getElementById('val-status').innerHTML = `<span class="badge badge-active">${user.accountStatus}</span>`;
-      document.getElementById('val-email-verified').innerHTML = user.emailVerified
-        ? '<span class="badge badge-active">Verified</span>'
-        : '<span class="badge badge-unverified">Unverified</span>';
+      document.getElementById('firstName').value = currentUser.firstName || '';
+      document.getElementById('lastName').value = currentUser.lastName || '';
+      document.getElementById('displayName').value = currentUser.displayName || '';
+      document.getElementById('email').value = currentUser.email || '';
+      document.getElementById('phone').value = currentUser.phone || '';
+      document.getElementById('country').value = currentUser.country || '';
+      document.getElementById('state').value = currentUser.state || '';
+      document.getElementById('city').value = currentUser.city || '';
+      document.getElementById('address').value = currentUser.address || '';
+      document.getElementById('postalCode').value = currentUser.postalCode || '';
+      document.getElementById('dateOfBirth').value = currentUser.dateOfBirth || '';
+      document.getElementById('preferredLanguage').value = currentUser.preferredLanguage || '';
+      document.getElementById('profilePhoto').value = currentUser.profilePhoto || '';
 
-      document.getElementById('val-phone-verified').innerHTML = user.phoneVerified
-        ? '<span class="badge badge-active">Verified</span>'
-        : '<span class="badge badge-unverified">Unverified</span>';
-
-      const status = user.profileStatus || {};
-      const percent = status.completionPercentage || (user.profileCompleted ? 100 : 50);
-
-      document.getElementById('val-profile-complete').innerHTML = user.profileCompleted
-        ? `<span class="badge badge-active">Complete (${percent}%)</span>`
-        : `<span class="badge badge-unverified">Incomplete (${percent}%) — <a href="complete-profile" style="color: inherit;">Complete Now</a></span>`;
-
-      document.getElementById('val-created-at').textContent = new Date(user.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-
-      document.getElementById('firstName').value = user.firstName || '';
-      document.getElementById('lastName').value = user.lastName || '';
-      document.getElementById('displayName').value = user.displayName || '';
-      document.getElementById('email-display').value = user.email || '';
-      document.getElementById('phone').value = user.phone || '';
-      document.getElementById('country').value = user.country || '';
-      document.getElementById('state').value = user.state || '';
-      document.getElementById('city').value = user.city || '';
-      document.getElementById('address').value = user.address || '';
-      document.getElementById('postalCode').value = user.postalCode || '';
-      document.getElementById('dateOfBirth').value = user.dateOfBirth || '';
-      document.getElementById('preferredLanguage').value = user.preferredLanguage || '';
-      document.getElementById('profilePhoto').value = user.profilePhoto || '';
-
-      updatePhoneBadge(user.phoneVerified, user.phone);
+      updatePhoneBadge(currentUser.phoneVerified, currentUser.phone);
+      updateProgress(currentUser.profileStatus ? currentUser.profileStatus.completionPercentage : 0);
     }
 
     function updatePhoneBadge(verified, phoneNum) {
@@ -207,9 +213,14 @@
       }
     }
 
+    function updateProgress(percent) {
+      document.getElementById('progress-percent').textContent = `${percent}%`;
+      document.getElementById('progress-bar').style.width = `${percent}%`;
+    }
+
     loadProfile();
 
-    // Send Phone Verification Code
+    // Send Phone Verification Code Action
     document.getElementById('send-phone-code-btn').addEventListener('click', async () => {
       hideAlert('alert');
       const phoneVal = document.getElementById('phone').value.trim();
@@ -235,7 +246,7 @@
       }
     });
 
-    // Confirm Phone Verification Code
+    // Confirm Phone Verification Code Action
     document.getElementById('confirm-phone-code-btn').addEventListener('click', async () => {
       hideAlert('alert');
       const codeVal = document.getElementById('phoneCode').value.trim();
@@ -251,7 +262,6 @@
         showAlert('alert', res.message, true);
         document.getElementById('phone-verify-box').style.display = 'none';
         updatePhoneBadge(true, document.getElementById('phone').value);
-        loadProfile();
       } catch (err) {
         showAlert('alert', err.message);
       } finally {
@@ -259,8 +269,8 @@
       }
     });
 
-    // Profile Form Submit
-    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+    // Profile Form Submission
+    document.getElementById('complete-profile-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       hideAlert('alert');
       setLoading('save-btn', true);
@@ -282,12 +292,25 @@
 
       try {
         const res = await API.patch('/account/profile', payload);
-        showAlert('alert', res.message, true);
-        loadProfile();
+        const updated = res.profile;
+
+        if (updated.profileStatus) {
+          updateProgress(updated.profileStatus.completionPercentage);
+        }
+
+        showAlert('alert', 'Profile updated successfully! Redirecting...', true);
+
+        setTimeout(() => {
+          if (returnTo) {
+            window.location.href = returnTo;
+          } else {
+            window.location.href = 'account';
+          }
+        }, 1200);
+
       } catch (err) {
-        showAlert('alert', err.message);
-      } finally {
-        setLoading('save-btn', false, 'Save Profile Changes');
+        showAlert('alert', err.message || 'Failed to save profile.');
+        setLoading('save-btn', false, 'Save Profile & Continue');
       }
     });
   </script>

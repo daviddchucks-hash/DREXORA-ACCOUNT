@@ -70,26 +70,34 @@ class OAuthService {
   async seedTestClient() {
     try {
       const existing = await this.getClient('dx_client_test_app');
+      const testAppRecord = {
+        clientId: 'dx_client_test_app',
+        clientType: 'public',
+        appType: 'external_application',
+        name: 'Drexora Identity Test App',
+        description: 'An independent external test application using Drexora SSO',
+        owner: { ownerId: 'dx_system_admin', ownerType: 'developer' },
+        redirectUris: [
+          'http://localhost:3000/test-client/callback.html',
+          'http://127.0.0.1:3000/test-client/callback.html',
+          'https://auth.drexxora.name.ng/test-client/callback.html'
+        ],
+        allowedOrigins: [
+          'http://localhost:3000',
+          'http://127.0.0.1:3000',
+          'https://auth.drexxora.name.ng',
+          'https://api.drexxora.name.ng'
+        ],
+        allowedScopes: ['openid', 'profile', 'email', 'phone', 'address'],
+        status: 'active'
+      };
+
       if (!existing) {
-        await this.registerClient({
-          clientId: 'dx_client_test_app',
-          clientType: 'public',
-          appType: 'external_application',
-          name: 'Drexora Identity Test App',
-          description: 'An independent external test application using Drexora SSO',
-          owner: { ownerId: 'dx_system_admin', ownerType: 'developer' },
-          redirectUris: [
-            'http://localhost:3000/test-client/callback.html',
-            'http://127.0.0.1:3000/test-client/callback.html',
-            'https://auth.drexxora.name.ng/test-client/callback.html'
-          ],
-          allowedOrigins: [
-            'http://localhost:3000',
-            'http://127.0.0.1:3000',
-            'https://auth.drexxora.name.ng',
-            'https://api.drexxora.name.ng'
-          ],
-          allowedScopes: ['openid', 'profile', 'email'],
+        await this.registerClient(testAppRecord);
+      } else {
+        await db.update('oauthClients/dx_client_test_app', {
+          allowedScopes: ['openid', 'profile', 'email', 'phone', 'address'],
+          redirectUris: testAppRecord.redirectUris,
           status: 'active'
         });
       }
@@ -119,7 +127,7 @@ class OAuthService {
   validateScopes(client, scopeString) {
     if (!scopeString) return ['openid'];
     const requested = scopeString.split(' ').map(s => s.trim()).filter(Boolean);
-    const allowed = client.allowedScopes || ['openid', 'profile', 'email'];
+    const allowed = client.allowedScopes || ['openid', 'profile', 'email', 'phone', 'address'];
 
     for (const reqScope of requested) {
       if (!allowed.includes(reqScope)) {
@@ -245,6 +253,7 @@ class OAuthService {
 
     // If 'openid' scope requested, issue signed OIDC ID Token
     if (scopeList.includes('openid')) {
+      const profile = user.profile || {};
       const idTokenClaims = {
         iss: config.appUrl,
         sub: user.drexoraUserId, // permanent Drexora User ID
@@ -252,12 +261,30 @@ class OAuthService {
       };
 
       if (scopeList.includes('profile')) {
-        idTokenClaims.name = user.profile.fullName;
+        idTokenClaims.name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+        if (profile.firstName) idTokenClaims.given_name = profile.firstName;
+        if (profile.lastName) idTokenClaims.family_name = profile.lastName;
+        if (profile.profilePhoto) idTokenClaims.picture = profile.profilePhoto;
       }
 
       if (scopeList.includes('email')) {
-        idTokenClaims.email = user.profile.email;
-        idTokenClaims.email_verified = user.emailVerified;
+        idTokenClaims.email = profile.email;
+        idTokenClaims.email_verified = Boolean(user.emailVerified);
+      }
+
+      if (scopeList.includes('phone') && profile.phone) {
+        idTokenClaims.phone_number = profile.phone;
+        idTokenClaims.phone_number_verified = Boolean(user.phoneVerified);
+      }
+
+      if (scopeList.includes('address')) {
+        idTokenClaims.address = {
+          street_address: profile.address || '',
+          locality: profile.city || '',
+          region: profile.state || '',
+          postal_code: profile.postalCode || '',
+          country: profile.country || ''
+        };
       }
 
       tokenResponse.id_token = signJwt(idTokenClaims, config.jwtSecret, {
@@ -306,6 +333,7 @@ class OAuthService {
     }
 
     const scopeList = (tokenRecord.scope || '').split(' ').filter(Boolean);
+    const profile = user.profile || {};
 
     // sub (permanent Drexora User ID) is mandatory for OIDC
     const userInfo = {
@@ -313,12 +341,33 @@ class OAuthService {
     };
 
     if (scopeList.includes('profile') || scopeList.includes('account.read') || scopeList.includes('profile.read')) {
-      userInfo.name = user.profile.fullName;
+      userInfo.name = profile.fullName || `${profile.firstName || ''} ${profile.lastName || ''}`.trim();
+      if (profile.firstName) userInfo.given_name = profile.firstName;
+      if (profile.lastName) userInfo.family_name = profile.lastName;
+      if (profile.displayName) userInfo.preferred_username = profile.displayName;
+      if (profile.profilePhoto) userInfo.picture = profile.profilePhoto;
     }
 
     if (scopeList.includes('email') || scopeList.includes('email.read')) {
-      userInfo.email = user.profile.email;
-      userInfo.email_verified = user.emailVerified;
+      userInfo.email = profile.email;
+      userInfo.email_verified = Boolean(user.emailVerified);
+    }
+
+    if (scopeList.includes('phone')) {
+      if (profile.phone) {
+        userInfo.phone_number = profile.phone;
+        userInfo.phone_number_verified = Boolean(user.phoneVerified);
+      }
+    }
+
+    if (scopeList.includes('address')) {
+      userInfo.address = {
+        street_address: profile.address || '',
+        locality: profile.city || '',
+        region: profile.state || '',
+        postal_code: profile.postalCode || '',
+        country: profile.country || ''
+      };
     }
 
     return userInfo;

@@ -89,6 +89,14 @@ class OAuthController {
         return redirectWithError('access_denied', `Your account is ${user.accountStatus}`);
       }
 
+      // Check profile completion requirement
+      if (!user.profileCompleted) {
+        const backendBase = config.appUrl || `${req.protocol}://${req.get('host')}`;
+        const relativeOrAbsolute = req.originalUrl || `/oauth/authorize?${new URLSearchParams(req.query).toString()}`;
+        const returnUrl = relativeOrAbsolute.startsWith('http') ? relativeOrAbsolute : `${backendBase}${relativeOrAbsolute}`;
+        return res.redirect(`${frontendBase}/complete-profile?return_to=${encodeURIComponent(returnUrl)}`);
+      }
+
       // 8. Handle Consent
       if (consentAction === 'approved') {
         await oauthService.recordUserConsent(user.drexoraUserId, client.clientId, validatedScopes);
@@ -168,8 +176,10 @@ class OAuthController {
 
       const scopeDescriptions = {
         openid: 'Verify your identity using Drexora Single Sign-On',
-        profile: 'Access your full name and public account profile',
+        profile: 'Access your full name, display name, and public account profile',
         email: 'Access your primary email address and email verification status',
+        phone: 'Access your phone number and phone verification status',
+        address: 'Access your street address, city, state, postal code, and country',
         'profile.read': 'Access your profile name',
         'email.read': 'Access your email address',
         'account.read': 'Access your account basic details'
@@ -333,7 +343,7 @@ class OAuthController {
         response_types_supported: ['code'],
         subject_types_supported: ['public'],
         id_token_signing_alg_values_supported: ['HS256'],
-        scopes_supported: ['openid', 'profile', 'email', 'profile.read', 'email.read', 'account.read'],
+        scopes_supported: ['openid', 'profile', 'email', 'phone', 'address', 'profile.read', 'email.read', 'account.read'],
         token_endpoint_auth_methods_supported: ['client_secret_post', 'none'],
         code_challenge_methods_supported: ['S256', 'plain'],
         grant_types_supported: ['authorization_code']

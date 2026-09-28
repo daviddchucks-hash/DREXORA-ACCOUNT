@@ -36,6 +36,7 @@ describe('Drexora Platform Layer & Security Comprehensive Test Suite', () => {
       });
     assert.equal(resA.status, 201);
     const devAId = resA.body.drexoraUserId;
+    await userService.updateProfile(devAId, { firstName: 'Developer', lastName: 'Alice', phone: '+1234567891', country: 'United States' });
     await userService.markEmailVerified(devAId);
 
     // Login Developer A
@@ -58,6 +59,7 @@ describe('Drexora Platform Layer & Security Comprehensive Test Suite', () => {
       });
     assert.equal(resB.status, 201);
     const devBId = resB.body.drexoraUserId;
+    await userService.updateProfile(devBId, { firstName: 'Developer', lastName: 'Bob', phone: '+1234567892', country: 'United States' });
     await userService.markEmailVerified(devBId);
 
     const loginB = await request(app)
@@ -79,6 +81,7 @@ describe('Drexora Platform Layer & Security Comprehensive Test Suite', () => {
       });
     assert.equal(resU.status, 201);
     const userId = resU.body.drexoraUserId;
+    await userService.updateProfile(userId, { firstName: 'User', lastName: 'Charlie', phone: '+1234567893', country: 'United States' });
     await userService.markEmailVerified(userId);
 
     const loginU = await request(app)

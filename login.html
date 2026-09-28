@@ -62,7 +62,12 @@
         if (res.token) {
           sessionStorage.setItem('drexora_token', res.token);
         }
-        window.location.href = returnTo || 'account';
+        if (res.user && !res.user.profileCompleted) {
+          const target = returnTo ? `complete-profile?return_to=${encodeURIComponent(returnTo)}` : 'complete-profile';
+          window.location.href = target;
+        } else {
+          window.location.href = returnTo || 'account';
+        }
       } catch (err) {
         setLoading('submit-btn', false);
         showAlert('alert', err.message);
