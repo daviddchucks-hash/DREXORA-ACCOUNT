@@ -52,17 +52,9 @@ class MemoryDB {
   }
 
   async update(path, data) {
-    const existing = (await this.get(path)) || {};
     if (typeof data === 'object' && data !== null) {
       for (const [k, v] of Object.entries(data)) {
-        if (k.includes('/')) {
-          await this.set(`${path}/${k}`, v);
-        } else {
-          existing[k] = v;
-        }
-      }
-      if (!Object.keys(data).some(k => k.includes('/'))) {
-        await this.set(path, existing);
+        await this.set(`${path}/${k}`, v);
       }
     } else {
       await this.set(path, data);

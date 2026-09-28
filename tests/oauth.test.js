@@ -28,6 +28,12 @@ describe('Drexora OAuth 2.0 & OIDC SSO Integration Test Suite', () => {
     });
 
     testUser = await userService.findByEmail('alice.oauth@example.com');
+    await userService.updateProfile(testUser.drexoraUserId, {
+      firstName: 'Alice',
+      lastName: 'Smith',
+      phone: '+1234567890',
+      country: 'United States'
+    });
     await userService.markEmailVerified(testUser.drexoraUserId);
 
     // Login user to obtain valid session cookie

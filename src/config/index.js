@@ -21,6 +21,9 @@ module.exports = {
     apiKey: process.env.RESEND_API_KEY,
     from: process.env.EMAIL_FROM || 'Drexora Account <no-reply@drexxora.name.ng>'
   },
+  sms: {
+    providerKey: process.env.SMS_PROVIDER_KEY || process.env.TWILIO_ACCOUNT_SID || null
+  },
   security: {
     rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
     rateLimitMax: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10),

@@ -61,6 +61,45 @@ function isValidName(name) {
 }
 
 /**
+ * Validates phone number format (international standard / E.164 or digits).
+ * Allows leading +, digits, spaces, hyphens, parentheses. 7-20 digits.
+ * @param {string} phone
+ * @returns {boolean}
+ */
+function isValidPhone(phone) {
+  if (typeof phone !== 'string') return false;
+  const digitsOnly = phone.replace(/\D/g, '');
+  if (digitsOnly.length < 7 || digitsOnly.length > 15) return false;
+  const phoneRegex = /^\+?[0-9\s\-\(\)]{7,20}$/;
+  return phoneRegex.test(phone.trim());
+}
+
+/**
+ * Validates country string.
+ * @param {string} country
+ * @returns {boolean}
+ */
+function isValidCountry(country) {
+  if (typeof country !== 'string') return false;
+  const trimmed = country.trim();
+  return trimmed.length >= 2 && trimmed.length <= 100;
+}
+
+/**
+ * Validates date of birth string (YYYY-MM-DD or ISO format). Must be in past.
+ * @param {string} dob
+ * @returns {boolean}
+ */
+function isValidDateOfBirth(dob) {
+  if (typeof dob !== 'string') return false;
+  const trimmed = dob.trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return false;
+  const date = new Date(trimmed);
+  if (isNaN(date.getTime())) return false;
+  return date < new Date();
+}
+
+/**
  * Sanitizes input text to prevent basic XSS when echoing strings.
  * @param {string} str
  */
@@ -79,5 +118,8 @@ module.exports = {
   isValidEmail,
   validatePassword,
   isValidName,
+  isValidPhone,
+  isValidCountry,
+  isValidDateOfBirth,
   sanitizeInput
 };

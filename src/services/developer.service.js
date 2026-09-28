@@ -6,8 +6,10 @@ const { generateSecureToken, hashToken } = require('../utils/id.generator');
 // Global Scope Registry
 const GLOBAL_SCOPE_REGISTRY = [
   { key: 'openid', name: 'OpenID Connect', description: 'Authenticate identity and obtain unique Drexora User ID (sub)', isDefault: true },
-  { key: 'profile', name: 'Profile Details', description: 'Access full name and basic public profile details', isDefault: false },
+  { key: 'profile', name: 'Profile Details', description: 'Access full name, display name, and basic profile details', isDefault: false },
   { key: 'email', name: 'Email Address', description: 'Access primary email address and email verification status', isDefault: false },
+  { key: 'phone', name: 'Phone Number', description: 'Access verified phone number and verification status', isDefault: false },
+  { key: 'address', name: 'Mailing & Location Address', description: 'Access street address, city, state, postal code, and country', isDefault: false },
   { key: 'profile.read', name: 'Read Profile', description: 'Read-only access to user profile name', isDefault: false },
   { key: 'email.read', name: 'Read Email', description: 'Read-only access to email address', isDefault: false },
   { key: 'account.read', name: 'Read Account Info', description: 'Access basic account metadata', isDefault: false }

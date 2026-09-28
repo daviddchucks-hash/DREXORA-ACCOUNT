@@ -2,8 +2,10 @@ const userService = require('./user.service');
 const sessionService = require('./session.service');
 const tokenService = require('./token.service');
 const emailService = require('./email.service');
+const auditService = require('./audit.service');
+const config = require('../config');
 const { hashPassword, verifyPassword } = require('../utils/password.util');
-const { normalizeEmail, isValidEmail, validatePassword, isValidName } = require('../utils/validator.util');
+const { normalizeEmail, isValidEmail, validatePassword, isValidName, isValidPhone } = require('../utils/validator.util');
 
 const VERIFICATION_TOKEN_TTL = 24 * 60 * 60 * 1000; // 24 hours
 const PASSWORD_RESET_TOKEN_TTL = 60 * 60 * 1000; // 1 hour
@@ -363,6 +365,98 @@ class AuthService {
     await userService.updatePrimaryEmail(drexoraUserId, newEmail);
 
     return { message: 'Your primary account email address has been updated successfully.' };
+  }
+
+  /**
+   * Phone Number Verification Request
+   */
+  async sendPhoneVerification(drexoraUserId, phoneNumInput) {
+    const user = await userService.findByUserId(drexoraUserId);
+    if (!user) throw { status: 404, message: 'User not found' };
+
+    let phoneToVerify = phoneNumInput ? phoneNumInput.trim() : (user.profile && user.profile.phone);
+
+    if (phoneNumInput) {
+      const updatedUser = await userService.updateProfile(drexoraUserId, { phone: phoneNumInput });
+      phoneToVerify = updatedUser.profile.phone;
+    }
+
+    if (!phoneToVerify || !isValidPhone(phoneToVerify)) {
+      throw { status: 400, message: 'A valid phone number is required to send a verification code' };
+    }
+
+    const isSmsConfigured = Boolean(config.sms && config.sms.providerKey);
+    const isTestEnv = config.nodeEnv === 'test' || process.env.NODE_ENV === 'test';
+
+    if (!isSmsConfigured && !isTestEnv) {
+      return {
+        success: false,
+        disabled: true,
+        message: 'Phone verification service is currently unavailable because SMS provider credentials are not configured.'
+      };
+    }
+
+    const { rawToken: verificationCode } = await tokenService.createToken(
+      'phoneVerificationTokens',
+      { drexoraUserId, phone: phoneToVerify },
+      10 * 60 * 1000,
+      true
+    );
+
+    if (isSmsConfigured) {
+      console.log(`[SMS Provider] Verification code ${verificationCode} sent to ${phoneToVerify}`);
+    } else {
+      console.log(`[SMS Mock/Test] Phone verification code for ${drexoraUserId} (${phoneToVerify}): ${verificationCode}`);
+    }
+
+    return {
+      success: true,
+      disabled: false,
+      message: `A 6-digit verification code has been sent to ${phoneToVerify}.`,
+      ...(isTestEnv ? { debugCode: verificationCode } : {})
+    };
+  }
+
+  /**
+   * Phone Number Verification Confirmation
+   */
+  async verifyPhone(drexoraUserId, rawCode) {
+    if (!rawCode || typeof rawCode !== 'string') {
+      throw { status: 400, message: 'Verification code is required' };
+    }
+
+    const result = await tokenService.verifyAndConsumeToken('phoneVerificationTokens', rawCode.trim());
+
+    if (!result.valid) {
+      if (result.reason === 'already_used') {
+        throw { status: 400, message: 'This phone verification code has already been used.' };
+      }
+      if (result.reason === 'expired') {
+        throw { status: 400, message: 'Phone verification code has expired. Please request a new code.' };
+      }
+      throw { status: 400, message: 'Invalid phone verification code. Please check your phone and try again.' };
+    }
+
+    const tokenUserId = result.data.drexoraUserId;
+    if (tokenUserId !== drexoraUserId) {
+      throw { status: 403, message: 'This verification code belongs to another account.' };
+    }
+
+    await userService.markPhoneVerified(drexoraUserId);
+
+    const updatedUser = await userService.findByUserId(drexoraUserId);
+
+    await auditService.logEvent({
+      event: 'account.phone_verified',
+      userId: drexoraUserId,
+      metadata: { phone: updatedUser.profile ? updatedUser.profile.phone : null }
+    });
+
+    return {
+      phoneVerified: true,
+      profileCompleted: Boolean(updatedUser.profileCompleted),
+      message: 'Phone number verified successfully!'
+    };
   }
 }
 

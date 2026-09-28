@@ -1,4 +1,5 @@
 const userService = require('../services/user.service');
+const authService = require('../services/auth.service');
 const sessionService = require('../services/session.service');
 const config = require('../config');
 const { clearCookieOptions } = require('../middleware/auth.middleware');
@@ -21,6 +22,35 @@ class AccountController {
         profile: userService.toPublicProfile(updatedUser)
       });
     } catch (error) {
+      if (error.status && error.message) {
+        return res.status(error.status).json({ error: error.message });
+      }
+      next(error);
+    }
+  }
+
+  async sendPhoneVerification(req, res, next) {
+    try {
+      const phoneInput = req.body ? req.body.phone : null;
+      const result = await authService.sendPhoneVerification(req.user.drexoraUserId, phoneInput);
+      res.json(result);
+    } catch (error) {
+      if (error.status && error.message) {
+        return res.status(error.status).json({ error: error.message });
+      }
+      next(error);
+    }
+  }
+
+  async verifyPhone(req, res, next) {
+    try {
+      const code = req.body ? (req.body.code || req.body.token) : null;
+      const result = await authService.verifyPhone(req.user.drexoraUserId, code);
+      res.json(result);
+    } catch (error) {
+      if (error.status && error.message) {
+        return res.status(error.status).json({ error: error.message });
+      }
       next(error);
     }
   }
