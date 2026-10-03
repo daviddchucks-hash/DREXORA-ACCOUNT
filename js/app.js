@@ -133,6 +133,95 @@ async function handleLogout() {
   window.location.href = 'login';
 }
 
+// Password Strength Checker Helper
+function calculatePasswordStrength(password) {
+  if (!password) return { level: 0, text: '', className: '' };
+
+  const hasMinLength = password.length >= 8;
+  const hasLower = /[a-z]/.test(password);
+  const hasUpper = /[A-Z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+  let criteriaMet = 0;
+  if (hasMinLength) criteriaMet++;
+  if (hasLower) criteriaMet++;
+  if (hasUpper) criteriaMet++;
+  if (hasNumber) criteriaMet++;
+  if (hasSpecial) criteriaMet++;
+
+  if (!hasMinLength || criteriaMet <= 2) {
+    return { level: 1, text: 'Weak', className: 'strength-weak' };
+  } else if (criteriaMet === 3) {
+    return { level: 2, text: 'Medium', className: 'strength-medium' };
+  } else if (criteriaMet === 4) {
+    return { level: 3, text: 'Strong', className: 'strength-strong' };
+  } else {
+    return { level: 4, text: 'Very Strong', className: 'strength-very-strong' };
+  }
+}
+
+function initPasswordStrength(inputId) {
+  const inputEl = document.getElementById(inputId);
+  if (!inputEl) return;
+
+  if (inputEl.dataset.hasStrengthMeter) return;
+  inputEl.dataset.hasStrengthMeter = 'true';
+
+  const container = document.createElement('div');
+  container.className = 'password-strength-meter';
+  container.style.display = 'none';
+  container.innerHTML = `
+    <div class="strength-bars">
+      <div class="strength-bar"></div>
+      <div class="strength-bar"></div>
+      <div class="strength-bar"></div>
+      <div class="strength-bar"></div>
+    </div>
+    <div class="strength-label">
+      <span>Password strength</span>
+      <span class="strength-text"></span>
+    </div>
+  `;
+
+  inputEl.parentNode.insertBefore(container, inputEl.nextSibling);
+
+  const textEl = container.querySelector('.strength-text');
+
+  const updateStrength = () => {
+    const val = inputEl.value;
+    if (!val) {
+      container.style.display = 'none';
+      container.className = 'password-strength-meter';
+      textEl.textContent = '';
+      return;
+    }
+
+    container.style.display = 'block';
+    const result = calculatePasswordStrength(val);
+    container.className = `password-strength-meter ${result.className}`;
+    textEl.textContent = result.text;
+  };
+
+  inputEl.addEventListener('input', updateStrength);
+  if (inputEl.value) updateStrength();
+}
+
+// Auto-initialize on DOMReady / Load
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  const initAll = () => {
+    ['password', 'newPassword'].forEach(id => {
+      initPasswordStrength(id);
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAll);
+  } else {
+    initAll();
+  }
+}
+
 // Logout All Devices Action
 async function handleLogoutAll() {
   if (!confirm('Are you sure you want to log out from all devices?')) return;
